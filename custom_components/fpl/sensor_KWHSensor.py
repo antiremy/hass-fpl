@@ -1,15 +1,22 @@
 """energy sensors"""
 from datetime import date, timedelta
+
 from homeassistant.components.sensor import (
-    STATE_CLASS_TOTAL_INCREASING,
-    STATE_CLASS_TOTAL,
-    DEVICE_CLASS_ENERGY,
+    SensorEntity,
+    SensorDeviceClass,
+    SensorStateClass,
 )
 from .fplEntity import FplEnergyEntity
 
 
 class ProjectedKWHSensor(FplEnergyEntity):
     """Projected KWH sensor"""
+
+    # Typically, a "projected" value is not strictly cumulative.
+    # Use MEASUREMENT or TOTAL (without _INCREASING) as needed.
+    # For now, let's assume it's a measurement of an estimation.
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator, config, account):
         super().__init__(coordinator, config, account, "Projected KWH")
@@ -23,15 +30,13 @@ class ProjectedKWHSensor(FplEnergyEntity):
 
         return self._attr_native_value
 
-    def customAttributes(self):
-        """Return the state attributes."""
-        attributes = {}
-        # attributes["state_class"] = STATE_CLASS_TOTAL
-        return attributes
-
 
 class DailyAverageKWHSensor(FplEnergyEntity):
     """Daily Average KWH sensor"""
+
+    # Averages are often treated as measurements too, not cumulative totals.
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator, config, account):
         super().__init__(coordinator, config, account, "Daily Average KWH")
@@ -45,21 +50,15 @@ class DailyAverageKWHSensor(FplEnergyEntity):
 
         return self._attr_native_value
 
-    def customAttributes(self):
-        """Return the state attributes."""
-        attributes = {}
-        # attributes["state_class"] = STATE_CLASS_TOTAL
-        return attributes
-
 
 class BillToDateKWHSensor(FplEnergyEntity):
     """Bill To Date KWH sensor"""
 
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_device_class = SensorDeviceClass.ENERGY
+
     def __init__(self, coordinator, config, account):
         super().__init__(coordinator, config, account, "Bill To Date KWH")
-
-    _attr_state_class = STATE_CLASS_TOTAL_INCREASING
-    _attr_device_class = DEVICE_CLASS_ENERGY
 
     @property
     def native_value(self):
@@ -68,20 +67,18 @@ class BillToDateKWHSensor(FplEnergyEntity):
         if billToDateKWH is not None:
             self._attr_native_value = billToDateKWH
 
-        print(self.state_class)
-
         return self._attr_native_value
 
 
 class NetReceivedKWHSensor(FplEnergyEntity):
     """Received Meter Reading KWH sensor"""
 
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_device_class = SensorDeviceClass.ENERGY
+
     def __init__(self, coordinator, config, account):
         super().__init__(coordinator, config, account, "Received Meter Reading KWH")
 
-    _attr_state_class = STATE_CLASS_TOTAL_INCREASING
-    _attr_device_class = DEVICE_CLASS_ENERGY
-    
     @property
     def native_value(self):
         recMtrReading = self.getData("recMtrReading")
@@ -91,22 +88,16 @@ class NetReceivedKWHSensor(FplEnergyEntity):
 
         return self._attr_native_value
 
-    def customAttributes(self):
-        """Return the state attributes."""
-        attributes = {}
-        # attributes["state_class"] = STATE_CLASS_TOTAL_INCREASING
-        return attributes
-
 
 class NetDeliveredKWHSensor(FplEnergyEntity):
     """Delivered Meter Reading KWH sensor"""
 
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
+    _attr_device_class = SensorDeviceClass.ENERGY
+
     def __init__(self, coordinator, config, account):
         super().__init__(coordinator, config, account, "Delivered Meter Reading KWH")
 
-    _attr_state_class = STATE_CLASS_TOTAL_INCREASING
-    _attr_device_class = DEVICE_CLASS_ENERGY
-    
     @property
     def native_value(self):
         delMtrReading = self.getData("delMtrReading")
@@ -115,9 +106,3 @@ class NetDeliveredKWHSensor(FplEnergyEntity):
             self._attr_native_value = delMtrReading
 
         return self._attr_native_value
-
-    def customAttributes(self):
-        """Return the state attributes."""
-        attributes = {}
-        # attributes["state_class"] = STATE_CLASS_TOTAL_INCREASING
-        return attributes
