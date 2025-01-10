@@ -1,18 +1,25 @@
 """Hourly Usage Sensors"""
 from datetime import timedelta, datetime
+
+# Modern imports:
 from homeassistant.components.sensor import (
-    STATE_CLASS_TOTAL_INCREASING,
-    STATE_CLASS_TOTAL,
-    DEVICE_CLASS_ENERGY,
+    SensorEntity,
+    SensorDeviceClass,
+    SensorStateClass,
 )
+from homeassistant.components.recorder import StatisticMetaData  # If you need statistic metadata
+
 from .fplEntity import FplEnergyEntity, FplMoneyEntity
-#from homeassistant_historical_sensor import (
-#    HistoricalSensor, HistoricalState, PollUpdateMixin,
-#)
 
 
 class FplHourlyUsageSensor(FplMoneyEntity):
-    """Hourly Usage Cost Sensor"""
+    """Hourly Usage Cost Sensor (monetary)"""
+
+    # If this cost is just for the current hour and resets each hour,
+    # consider using SensorStateClass.MEASUREMENT.
+    # If it's a cumulative cost that keeps increasing, consider TOTAL_INCREASING.
+    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator, config, account):
         super().__init__(coordinator, config, account, "Hourly Usage")
@@ -20,164 +27,140 @@ class FplHourlyUsageSensor(FplMoneyEntity):
     @property
     def native_value(self):
         data = self.getData("hourly_usage")
-
-        if data is not None and len(data) > 0 and "cost" in data[-1].keys():
+        if data and len(data) > 0 and "cost" in data[-1]:
             self._attr_native_value = data[-1]["cost"]
-
         return self._attr_native_value
 
     def customAttributes(self):
-        """Return the state attributes."""
+        """Return any additional attributes."""
         data = self.getData("hourly_usage")
         attributes = {}
-
-        if data is not None and len(data) > 0 and "readTime" in data[-1].keys():
+        if data and len(data) > 0 and "readTime" in data[-1]:
             attributes["date"] = data[-1]["readTime"]
-
         return attributes
 
 
 class FplHourlyUsageKWHSensor(FplEnergyEntity):
-    """Hourly Usage Kwh Sensor"""
+    """Hourly Usage KWh Sensor"""
+
+    # Decide if this is cumulative (TOTAL / TOTAL_INCREASING) 
+    # or a per-hour reading that resets each hour (MEASUREMENT).
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator, config, account):
         super().__init__(coordinator, config, account, "Hourly Usage KWH")
 
-    # _attr_state_class = STATE_CLASS_TOTAL
-    _attr_device_class = DEVICE_CLASS_ENERGY
-
-    @property def statistic_id(self) -> str:
+    @property
+    def statistic_id(self) -> str:
+        """Optional statistic_id for advanced stats/energy dashboard."""
         return self.entity_id
-        
-    #@property
-    #def native_value(self):
-    #    data = self.getData("hourly_usage")
 
-    #    if data is not None and len(data) > 0 and "kwhActual" in data[-1].keys():
-    #        self._attr_native_value = data[-1]["kwhActual"]
-
-    #    return self._attr_native_value
-
-    #@property
-    #def last_reset(self) -> datetime | None:
-    #    data = self.getData("hourly_usage")
-    #    if data is not None and len(data) > 0 and "readTime" in data[-1].keys():
-    #        date = data[-1]["readTime"]
-    #        _attr_last_reset = date
-    #    else:
-    #        _attr_last_reset = None
-
-    #    return _attr_last_reset
+    # Uncomment and adapt if you want to return a reading from the coordinator:
+    #
+    # @property
+    # def native_value(self):
+    #     data = self.getData("hourly_usage")
+    #     if data and len(data) > 0 and "kwhActual" in data[-1]:
+    #         self._attr_native_value = data[-1]["kwhActual"]
+    #     return self._attr_native_value
+    #
+    # @property
+    # def last_reset(self) -> datetime | None:
+    #     data = self.getData("hourly_usage")
+    #     if data and len(data) > 0 and "readTime" in data[-1]:
+    #         return data[-1]["readTime"]  # or data[-1]["readTime"] - timedelta(hours=1)
+    #     return None
 
     def customAttributes(self):
- 
-        attributes = {}
- 
-        return attributes
+        return {}
 
 
 class FplHourlyReceivedKWHSensor(FplEnergyEntity):
-    """hourly received Kwh sensor"""
+    """Hourly Received KWh Sensor"""
+
+    # If you’re tracking an hourly usage that resets each hour, use MEASUREMENT or TOTAL.
+    # If it's a continuously growing total, use TOTAL_INCREASING.
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator, config, account):
         super().__init__(coordinator, config, account, "Hourly Received KWH")
 
+    # Example method if you want to provide statistic metadata:
     def get_statistic_metadata(self) -> StatisticMetaData:
-        meta = super().get_statistic_metadata() meta["has_sum"] = True
+        meta = super().get_statistic_metadata()
+        meta["has_sum"] = True
         meta["has_mean"] = True
-
         return meta
-        
-    # _attr_state_class = STATE_CLASS_TOTAL
-    _attr_device_class = DEVICE_CLASS_ENERGY
-    
-    @property def statistic_id(self) -> str:
+
+    @property
+    def statistic_id(self) -> str:
         return self.entity_id
-        
 
-    #@property
-    #def native_value(self):
-    #    data = self.getData("hourly_usage")
+    # Uncomment if you want to provide a reading:
+    #
+    # @property
+    # def native_value(self):
+    #     data = self.getData("hourly_usage")
+    #     if data and len(data) > 0 and "netReceived" in data[-1]:
+    #         self._attr_native_value = data[-1]["netReceived"]
+    #     return self._attr_native_value
+    #
+    # @property
+    # def last_reset(self) -> datetime | None:
+    #     data = self.getData("hourly_usage")
+    #     if data and len(data) > 0 and "readTime" in data[-1]:
+    #         return data[-1]["readTime"]
+    #     return None
 
-    #    if data is not None and len(data) > 0 and "netReceived" in data[-1].keys():
-    #        self._attr_native_value = data[-1]["netReceived"]
-
-    #    return self._attr_native_value
-
-    #@property
-    #def last_reset(self) -> datetime | None:
-    #    data = self.getData("hourly_usage")
-    #    if data is not None and len(data) > 0 and "readTime" in data[-1].keys():
-    #        date = data[-1]["readTime"]
-    #        _attr_last_reset = date
-    #    else:
-    #        _attr_last_reset = None
-
-    #    return _attr_last_reset
-        
     def customAttributes(self):
-  
-        attributes = {}
-
-        return attributes
+        return {}
 
 
 class FplHourlyDeliveredKWHSensor(FplEnergyEntity):
-    """hourly delivered Kwh sensor"""
+    """Hourly Delivered KWh Sensor"""
 
-    #_attr_state_class = STATE_CLASS_TOTAL
-    _attr_device_class = DEVICE_CLASS_ENERGY
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator, config, account):
         super().__init__(coordinator, config, account, "Hourly Delivered KWH")
 
-    #@property
-    #def native_value(self):
-    #    data = self.getData("hourly_usage")
+    # @property
+    # def native_value(self):
+    #     data = self.getData("hourly_usage")
+    #     if data and len(data) > 0 and "netDelivered" in data[-1]:
+    #         self._attr_native_value = data[-1]["netDelivered"]
+    #     return self._attr_native_value
+    #
+    # @property
+    # def last_reset(self) -> datetime | None:
+    #     data = self.getData("hourly_usage")
+    #     if data and len(data) > 0 and "readTime" in data[-1]:
+    #         return data[-1]["readTime"]
+    #     return None
 
-    #    if data is not None and len(data) > 0 and "netDelivered" in data[-1].keys():
-    #        self._attr_native_value = data[-1]["netDelivered"]
-
-    #    return self._attr_native_value
-
-    #@property
-    #def last_reset(self) -> datetime | None:
-    #    data = self.getData("hourly_usage")
-    #    if data is not None and len(data) > 0 and "readTime" in data[-1].keys():
-    #        date = data[-1]["readTime"]
-    #        _attr_last_reset = date
-    #    else:
-    #        _attr_last_reset = None
-
-    #    return _attr_last_reset
-        
     def customAttributes(self):
+        return {}
 
-        attributes = {}
-
-        return attributes
 
 class FplHourlyReadingKWHSensor(FplEnergyEntity):
-    """hourly reading Kwh sensor"""
+    """Hourly Reading KWh Sensor (Meter)"""
 
-    #_attr_state_class = STATE_CLASS_TOTAL_INCREASING
-    _attr_device_class = DEVICE_CLASS_ENERGY
+    # If this reading is a continuously increasing meter, use TOTAL_INCREASING.
+    _attr_device_class = SensorDeviceClass.ENERGY
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
 
     def __init__(self, coordinator, config, account):
         super().__init__(coordinator, config, account, "Hourly reading KWH")
 
-    #@property
-    #def native_value(self):
-    #    data = self.getData("hourly_usage")
+    # @property
+    # def native_value(self):
+    #     data = self.getData("hourly_usage")
+    #     if data and len(data) > 0 and "reading" in data[-1]:
+    #         self._attr_native_value = data[-1]["reading"]
+    #     return self._attr_native_value
 
-    #    if data is not None and len(data) > 0 and "reading" in data[-1].keys():
-    #        self._attr_native_value = data[-1]["reading"]
-
-    #    return self._attr_native_value
-
- 
     def customAttributes(self):
-
-        attributes = {}
-
-        return attributes
+        return {}

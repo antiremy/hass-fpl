@@ -1,7 +1,7 @@
 """Projected bill sensors"""
 from homeassistant.components.sensor import (
-    # STATE_CLASS_TOTAL_INCREASING,
-    STATE_CLASS_TOTAL,
+    SensorDeviceClass,
+    SensorStateClass,
 )
 from .fplEntity import FplMoneyEntity
 
@@ -9,7 +9,10 @@ from .fplEntity import FplMoneyEntity
 class FplProjectedBillSensor(FplMoneyEntity):
     """Projected bill sensor"""
 
-    # _attr_state_class = STATE_CLASS_TOTAL
+    _attr_device_class = SensorDeviceClass.MONETARY
+    # If this projected bill is considered a total that resets each billing cycle:
+    _attr_state_class = SensorStateClass.TOTAL
+    # If it's just a point-in-time estimate, you could alternatively use MEASUREMENT.
 
     def __init__(self, coordinator, config, account):
         super().__init__(coordinator, config, account, "Projected Bill")
@@ -18,11 +21,10 @@ class FplProjectedBillSensor(FplMoneyEntity):
     def native_value(self):
         budget = self.getData("budget_bill")
         budget_billing_projected_bill = self.getData("budget_billing_projected_bill")
-
         projected_bill = self.getData("projected_bill")
 
         if budget and budget_billing_projected_bill is not None:
-            self._attr_native_value = self.getData("budget_billing_projected_bill")
+            self._attr_native_value = budget_billing_projected_bill
         else:
             if projected_bill is not None:
                 self._attr_native_value = projected_bill
@@ -30,17 +32,17 @@ class FplProjectedBillSensor(FplMoneyEntity):
         return self._attr_native_value
 
     def customAttributes(self):
-        """Return the state attributes."""
+        """Return any additional attributes."""
         attributes = {}
         attributes["budget_bill"] = self.getData("budget_bill")
         return attributes
 
 
-# Defered Amount
 class DeferedAmountSensor(FplMoneyEntity):
     """Defered amount sensor"""
 
-    # _attr_state_class = STATE_CLASS_TOTAL
+    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_state_class = SensorStateClass.TOTAL
 
     def __init__(self, coordinator, config, account):
         super().__init__(coordinator, config, account, "Defered Amount")
@@ -57,9 +59,10 @@ class DeferedAmountSensor(FplMoneyEntity):
 
 
 class ProjectedBudgetBillSensor(FplMoneyEntity):
-    """projected budget bill sensor"""
+    """Projected budget bill sensor"""
 
-    # _attr_state_class = STATE_CLASS_TOTAL
+    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_state_class = SensorStateClass.TOTAL
 
     def __init__(self, coordinator, config, account):
         super().__init__(coordinator, config, account, "Projected Budget Bill")
@@ -67,17 +70,16 @@ class ProjectedBudgetBillSensor(FplMoneyEntity):
     @property
     def native_value(self):
         budget_billing_projected_bill = self.getData("budget_billing_projected_bill")
-
         if budget_billing_projected_bill is not None:
             self._attr_native_value = budget_billing_projected_bill
-
         return self._attr_native_value
 
 
 class ProjectedActualBillSensor(FplMoneyEntity):
-    """projeted actual bill sensor"""
+    """Projected actual bill sensor"""
 
-    # _attr_state_class = STATE_CLASS_TOTAL
+    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_state_class = SensorStateClass.TOTAL
 
     def __init__(self, coordinator, config, account):
         super().__init__(coordinator, config, account, "Projected Actual Bill")
@@ -85,17 +87,16 @@ class ProjectedActualBillSensor(FplMoneyEntity):
     @property
     def native_value(self):
         projected_bill = self.getData("projected_bill")
-
         if projected_bill is not None:
             self._attr_native_value = projected_bill
-
         return self._attr_native_value
 
 
 class BillToDateSensor(FplMoneyEntity):
-    """projeted actual bill sensor"""
+    """Bill to date sensor"""
 
-    # _attr_state_class = STATE_CLASS_TOTAL
+    _attr_device_class = SensorDeviceClass.MONETARY
+    _attr_state_class = SensorStateClass.TOTAL
 
     def __init__(self, coordinator, config, account):
         super().__init__(coordinator, config, account, "Bill To Date")
