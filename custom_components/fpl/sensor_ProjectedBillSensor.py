@@ -1,8 +1,6 @@
 """Projected bill sensors"""
-from homeassistant.components.sensor import (
-    SensorDeviceClass,
-    SensorStateClass,
-)
+
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from .fplEntity import FplMoneyEntity
 
 

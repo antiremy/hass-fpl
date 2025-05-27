@@ -1,13 +1,9 @@
 """Test Sensors"""
-from datetime import timedelta, datetime
 
-from homeassistant.components.sensor import (
-    SensorEntity,
-    SensorDeviceClass,
-    SensorStateClass,
-)
+from datetime import datetime
+
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 from homeassistant.const import STATE_UNKNOWN
-from homeassistant.core import callback
 
 from .fplEntity import FplEnergyEntity
 

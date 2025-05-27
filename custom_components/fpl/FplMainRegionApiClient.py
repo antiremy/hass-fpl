@@ -2,7 +2,7 @@
 
 import json
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime
 import aiohttp
 import async_timeout
 
@@ -18,7 +18,11 @@ from .const import (
 
 STATUS_CATEGORY_OPEN = "OPEN"
 
-URL_LOGIN = API_HOST + "/api/resources/login"
+# URL_LOGIN = API_HOST + "/api/resources/login"
+URL_LOGIN = (
+    API_HOST
+    + "/cs/customer/v1/registration/loginAndUseMigration?migrationToggle=Y&view=LoginMini"
+)
 
 URL_BUDGET_BILLING_GRAPH = (
     API_HOST + "/api/resources/account/{account}/budgetBillingGraph"
@@ -31,9 +35,6 @@ URL_RESOURCES_PROJECTED_BILL = (
 )
 
 
-URL_APPLIANCE_USAGE = (
-    API_HOST + "/dashboard-api/resources/account/{account}/applianceUsage/{account}"
-)
 URL_BUDGET_BILLING_PREMISE_DETAILS = (
     API_HOST + "/api/resources/account/{account}/budgetBillingGraph/premiseDetails"
 )
@@ -66,6 +67,10 @@ class FplMainRegionApiClient:
             )
 
         if response.status == 200:
+            # Get JWT token from headers if present
+            jwt_token = response.headers.get("jwttoken")
+            if jwt_token:
+                self.jwt_token = jwt_token  # Store in a property
             return LOGIN_RESULT_OK
 
         if response.status == 401:
@@ -87,8 +92,12 @@ class FplMainRegionApiClient:
         """
         result = []
         URL = API_HOST + "/api/resources/header"
+        headers = {}
+        if hasattr(self, "jwt_token") and self.jwt_token:
+            headers["jwttoken"] = self.jwt_token
+
         async with async_timeout.timeout(TIMEOUT):
-            response = await self.session.get(URL)
+            response = await self.session.get(URL, headers=headers)
 
         json_data = await response.json()
         accounts = json_data["data"]["accounts"]["data"]["data"]
@@ -115,17 +124,19 @@ class FplMainRegionApiClient:
         data = {}
 
         URL_RESOURCES_ACCOUNT = API_HOST + "/api/resources/account/{account}"
-
+        headers = {}
+        if hasattr(self, "jwt_token") and self.jwt_token:
+            headers["jwttoken"] = self.jwt_token
         async with async_timeout.timeout(TIMEOUT):
             response = await self.session.get(
-                URL_RESOURCES_ACCOUNT.format(account=account)
+                URL_RESOURCES_ACCOUNT.format(account=account), headers=headers
             )
         account_data = (await response.json())["data"]
 
         premise = account_data.get("premiseNumber").zfill(9)
 
         data["meterSerialNo"] = account_data["meterSerialNo"]
-        #data["meterNo"] = account_data["meterNo"]
+        # data["meterNo"] = account_data["meterNo"]
         meterno = account_data["meterNo"]
 
         # currentBillDate
@@ -177,13 +188,21 @@ class FplMainRegionApiClient:
 
         # Get data from energy service
         data.update(
-            await self.__getDataFromEnergyService(account, premise, currentBillDate, meterno)
+            await self.__getDataFromEnergyServiceDaily(
+                account, premise, currentBillDate, meterno
+            )
+        )
+
+        data.update(
+            await self.__getDataFromEnergyService(
+                account, premise, currentBillDate, meterno
+            )
         )
 
         # Get data from energy service ( hourly )
         # data.update(await self.__getDataFromEnergyServiceHourly(account, premise, meterno))
 
-        data.update(await self.__getDataFromApplianceUsage(account, currentBillDate))
+        # data.update(await self.__getDataFromApplianceUsage(account, currentBillDate))
         data.update(await self.__getDataFromBalance(account))
 
         return data
@@ -193,13 +212,17 @@ class FplMainRegionApiClient:
         data = {}
 
         try:
+            headers = {}
+            if hasattr(self, "jwt_token") and self.jwt_token:
+                headers["jwttoken"] = self.jwt_token
             async with async_timeout.timeout(TIMEOUT):
                 response = await self.session.get(
                     URL_RESOURCES_PROJECTED_BILL.format(
                         account=account,
                         premise=premise,
                         lastBillDate=currentBillDate.strftime("%m%d%Y"),
-                    )
+                    ),
+                    headers=headers,
                 )
 
             if response.status == 200:
@@ -226,9 +249,13 @@ class FplMainRegionApiClient:
         data = {}
 
         try:
+            headers = {}
+            if hasattr(self, "jwt_token") and self.jwt_token:
+                headers["jwttoken"] = self.jwt_token
             async with async_timeout.timeout(TIMEOUT):
                 response = await self.session.get(
-                    URL_BUDGET_BILLING_PREMISE_DETAILS.format(account=account)
+                    URL_BUDGET_BILLING_PREMISE_DETAILS.format(account=account),
+                    headers=headers,
                 )
                 if response.status == 200:
                     r = (await response.json())["data"]
@@ -257,9 +284,12 @@ class FplMainRegionApiClient:
 
                     data["budget_billing_projected_bill"] = float(projectedBudgetBill)
 
+            headers = {}
+            if hasattr(self, "jwt_token") and self.jwt_token:
+                headers["jwttoken"] = self.jwt_token
             async with async_timeout.timeout(TIMEOUT):
                 response = await self.session.get(
-                    URL_BUDGET_BILLING_GRAPH.format(account=account)
+                    URL_BUDGET_BILLING_GRAPH.format(account=account), headers=headers
                 )
                 if response.status == 200:
                     r = (await response.json())["data"]
@@ -270,53 +300,56 @@ class FplMainRegionApiClient:
 
         return data
 
-    async def __getDataFromEnergyService(
+    async def __getDataFromEnergyServiceDaily(
         self, account, premise, lastBilledDate, meterno
     ) -> dict:
-        _LOGGER.info("Getting energy service data")
+        _LOGGER.info("Getting energy service data: Daily")
 
         date = str(lastBilledDate.strftime("%m%d%Y"))
-        JSON = {
-            "recordCount": 24,
-            "status": 2,
-            "channel": "WEB",
-            "amrFlag": "Y",
+        json = {
             "accountType": "RESIDENTIAL",
-            "revCode": "1",
-            "premiseNumber": premise,
-            "meterNo": meterno,
-            "projectedBillFlag": True,
-            "billComparisionFlag": True,
-            "monthlyFlag": True,
+            "amrFlag": "Y",
+            "applicationPage": "resDashBoard",
+            "billComparisionFlag": False,
+            "channel": "WEB",
+            "endDate": "",
             "frequencyType": "Daily",
             "lastBilledDate": date,
-            "applicationPage": "resDashBoard",
+            "meterNo": meterno,
+            "monthlyFlag": False,
+            "premiseNumber": premise,
+            "projectedBillFlag": False,
+            "revCode": "1",
+            "startDate": "",
+            "status": 2,
         }
         URL_ENERGY_SERVICE = (
             API_HOST
-            + "/dashboard-api/resources/account/{account}/energyService/{account}"
+            # + "/dashboard-api/resources/account/{account}/energyService/{account}"
+            + "/cs/customer/v1/energydashboard/resources/account/{account}/res-energy-service"
         )
 
         data = {}
         try:
+            headers = {}
+            if hasattr(self, "jwt_token") and self.jwt_token:
+                headers["jwttoken"] = self.jwt_token
             async with async_timeout.timeout(TIMEOUT):
                 response = await self.session.post(
-                    URL_ENERGY_SERVICE.format(account=account), json=JSON
+                    URL_ENERGY_SERVICE.format(account=account),
+                    json=json,
+                    headers=headers,
                 )
                 if response.status == 200:
                     rd = await response.json()
                     if "data" not in rd.keys():
-                        return []
+                        return {}
 
                     r = rd["data"]
                     dailyUsage = []
 
                     # totalPowerUsage = 0
-                    if (
-                        "data" in rd.keys()
-                        and "DailyUsage" in rd["data"]
-                        and "data" in rd["data"]["DailyUsage"]
-                    ):
+                    if "DailyUsage" in r and "data" in r["DailyUsage"]:
                         dailyData = rd["data"]["DailyUsage"]["data"]
                         for daily in dailyData:
                             if daily["missingDay"] != "true":
@@ -340,10 +373,14 @@ class FplMainRegionApiClient:
                                         "netReceivedKwh": daily["netReceivedKwh"]
                                         if "netReceivedKwh" in daily.keys()
                                         else 0,
-                                        "netDeliveredReading": daily["netDeliveredReading"]
+                                        "netDeliveredReading": daily[
+                                            "netDeliveredReading"
+                                        ]
                                         if "netDeliveredReading" in daily.keys()
                                         else 0,
-                                        "netReceivedReading": daily["netReceivedReading"]
+                                        "netReceivedReading": daily[
+                                            "netReceivedReading"
+                                        ]
                                         if "netReceivedReading" in daily.keys()
                                         else 0,
                                         "readTime": datetime.fromisoformat(
@@ -357,6 +394,59 @@ class FplMainRegionApiClient:
 
                         # data["total_power_usage"] = totalPowerUsage
                         data["daily_usage"] = dailyUsage
+        except Exception as e:
+            _LOGGER.error(e)
+
+        return data
+
+    async def __getDataFromEnergyService(
+        self, account, premise, lastBilledDate, meterno
+    ) -> dict:
+        _LOGGER.info("Getting energy service data")
+
+        date = str(lastBilledDate.strftime("%m%d%Y"))
+        json = {
+            "accountType": "RESIDENTIAL",
+            "amrFlag": "Y",
+            "applicationPage": "resDashBoard",
+            "billComparisionFlag": False,
+            "channel": "WEB",
+            "endDate": "",
+            "frequencyType": "Daily",
+            "lastBilledDate": date,
+            "meterNo": meterno,
+            "monthlyFlag": True,
+            "premiseNumber": premise,
+            "projectedBillFlag": False,
+            "revCode": "1",
+            "startDate": "",
+            "status": 2,
+        }
+        URL_ENERGY_SERVICE = (
+            API_HOST
+            # + "/dashboard-api/resources/account/{account}/energyService/{account}"
+            + "/cs/customer/v1/energydashboard/resources/account/{account}/res-energy-service"
+        )
+
+        data = {}
+        try:
+            headers = {}
+            if hasattr(self, "jwt_token") and self.jwt_token:
+                headers["jwttoken"] = self.jwt_token
+            async with async_timeout.timeout(TIMEOUT):
+                response = await self.session.post(
+                    URL_ENERGY_SERVICE.format(account=account),
+                    json=json,
+                    headers=headers,
+                )
+                if response.status == 200:
+                    rd = await response.json()
+                    if "data" not in rd.keys():
+                        return {}
+
+                    r = rd["data"]
+                    if "CurrentUsage" not in r.keys():
+                        return {}
 
                     currentUsage = r["CurrentUsage"]
                     data["projectedKWH"] = currentUsage["projectedKWH"]
@@ -370,9 +460,9 @@ class FplMainRegionApiClient:
 
         return data
 
-    async def __getDataFromEnergyServiceHourly(account, premise, meterno) -> dict:
+    async def __getDataFromEnergyServiceHourly(self, account, premise, meterno) -> dict:
         _LOGGER.info("Getting energy service hourly data")
-    
+
         today = str(datetime.now().strftime("%m%d%Y"))
         JSON = {
             "status": 2,
@@ -388,9 +478,9 @@ class FplMainRegionApiClient:
             "frequencyType": "Hourly",
             "applicationPage": "resDashBoard",
             "startDate": today,
-            "endDate":"",
+            "endDate": "",
         }
-        
+
         URL_ENERGY_SERVICE = (
             API_HOST
             + "/dashboard-api/resources/account/{account}/energyService/{account}"
@@ -405,9 +495,8 @@ class FplMainRegionApiClient:
                 if response.status == 200:
                     rd = await response.json()
                     if "data" not in rd.keys():
-                        return []
+                        return {}
 
-                    r = rd["data"]
                     hourlyUsage = []
 
                     # totalPowerUsage = 0
@@ -419,36 +508,36 @@ class FplMainRegionApiClient:
                         hourlyData = rd["data"]["HourlyUsage"]["data"]
                         for hourly in hourlyData:
                             hourlyUsage.append(
-                                    {
-                                        "usage": hourly["kwhUsed"]
-                                        if "kwhUsed" in hourly.keys()
-                                        else None,
-                                        "cost": hourly["billingCharged"]
-                                        if "billingCharged" in hourly.keys()
-                                        else None,
-                                        "temperature": hourly["temperature"]
-                                        if "temperature" in hourly.keys()
-                                        else None,
-                                        "netDelivered": hourly["netDelivered"]
-                                        if "netDelivered" in hourly.keys()
-                                        else 0,
-                                        "netReceived": hourly["netReceived"]
-                                        if "netReceived" in hourly.keys()
-                                        else 0,
-                                        "reading": hourly["reading"]
-                                        if "reading" in hourly.keys()
-                                        else 0,
-                                        "kwhActual": hourly["kwhActual"]
-                                        if "kwhActual" in hourly.keys()
-                                        else 0,
-                                        "readTime": datetime.fromisoformat(
-                                            hourly[
-                                                "readTime"
-                                            ]  # 2022-02-25T00:00:00.000-05:00
-                                        ),
-                                    }
-                                )
-                                
+                                {
+                                    "usage": hourly["kwhUsed"]
+                                    if "kwhUsed" in hourly.keys()
+                                    else None,
+                                    "cost": hourly["billingCharged"]
+                                    if "billingCharged" in hourly.keys()
+                                    else None,
+                                    "temperature": hourly["temperature"]
+                                    if "temperature" in hourly.keys()
+                                    else None,
+                                    "netDelivered": hourly["netDelivered"]
+                                    if "netDelivered" in hourly.keys()
+                                    else 0,
+                                    "netReceived": hourly["netReceived"]
+                                    if "netReceived" in hourly.keys()
+                                    else 0,
+                                    "reading": hourly["reading"]
+                                    if "reading" in hourly.keys()
+                                    else 0,
+                                    "kwhActual": hourly["kwhActual"]
+                                    if "kwhActual" in hourly.keys()
+                                    else 0,
+                                    "readTime": datetime.fromisoformat(
+                                        hourly[
+                                            "readTime"
+                                        ]  # 2022-02-25T00:00:00.000-05:00
+                                    ),
+                                }
+                            )
+
                         data["hourly_usage"] = hourlyUsage
         except Exception as e:
             _LOGGER.error(e)
@@ -459,13 +548,23 @@ class FplMainRegionApiClient:
         """get data from appliance usage"""
         _LOGGER.info("Getting appliance usage data")
 
+        URL_APPLIANCE_USAGE = (
+            API_HOST
+            + "/dashboard-api/resources/account/{account}/applianceUsage/{account}"
+        )
+
         JSON = {"startDate": str(lastBilledDate.strftime("%m%d%Y"))}
         data = {}
 
         try:
+            headers = {}
+            if hasattr(self, "jwt_token") and self.jwt_token:
+                headers["jwttoken"] = self.jwt_token
             async with async_timeout.timeout(TIMEOUT):
                 response = await self.session.post(
-                    URL_APPLIANCE_USAGE.format(account=account), json=JSON
+                    URL_APPLIANCE_USAGE.format(account=account),
+                    json=JSON,
+                    headers=headers,
                 )
                 if response.status == 200:
                     data = (await response.json())["data"]
@@ -488,24 +587,29 @@ class FplMainRegionApiClient:
         return {"energy_percent_by_applicance": data}
 
     async def __getDataFromBalance(self, account) -> dict:
-        """get data from appliance usage"""
-        _LOGGER.info("Getting appliance usage data")
+        """get balance data"""
+        _LOGGER.info("Getting Balance data")
 
         data = {}
 
         URL_BALANCE = API_HOST + "/api/resources/account/{account}/balance?count=-1"
 
         try:
+            headers = {}
+            if hasattr(self, "jwt_token") and self.jwt_token:
+                headers["jwttoken"] = self.jwt_token
             async with async_timeout.timeout(TIMEOUT):
-                response = await self.session.get(URL_BALANCE.format(account=account))
+                response = await self.session.get(
+                    URL_BALANCE.format(account=account), headers=headers
+                )
                 if response.status == 200:
                     data = (await response.json())["data"]
 
-                    indice = [i for i, x in enumerate(data) if x["details"] == "DEBT"][
-                        0
-                    ]
+                    # indice = [i for i, x in enumerate(data) if x["details"] == "DEBT"][
+                    #    0
+                    # ]
 
-                    deb = data[indice]["amount"]
+                    # deb = data[indice]["amount"]
 
         except Exception as e:
             _LOGGER.error(e)

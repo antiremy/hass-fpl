@@ -1,14 +1,14 @@
-""" FPL Component """
-
+"""FPL Component"""
 
 import logging
 import asyncio
 
 from datetime import timedelta
-from homeassistant.core import Config, HomeAssistant
+from homeassistant.core import HomeAssistant
+from homeassistant.core_config import Config
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.util import Throttle
 from homeassistant.const import CONF_USERNAME, CONF_PASSWORD
 
@@ -27,6 +27,7 @@ MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
 _LOGGER = logging.getLogger(__package__)
 
+
 def get_device_info():
     return DeviceInfo(
         identifiers={
@@ -35,6 +36,7 @@ def get_device_info():
         name=NAME,
         manufacturer=NAME,
     )
+
 
 class FplData:
     """This class handle communication and stores the data."""
@@ -80,12 +82,7 @@ async def async_setup_entry(hass, entry):
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
 
-    for platform in PLATFORMS:
-        if entry.options.get(platform, True):
-            coordinator.platforms.append(platform)
-            hass.async_add_job(
-                hass.config_entries.async_forward_entry_setup(entry, platform)
-            )
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     # Set up Fpl as config entry.
 

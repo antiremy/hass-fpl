@@ -1,10 +1,10 @@
 """Fpl Entity class"""
+
 from datetime import datetime, timedelta
 
 from homeassistant.components.sensor import (
     SensorEntity,
-    SensorDeviceClass,
-    SensorStateClass,  # Imported if you need to set _attr_state_class
+    SensorDeviceClass,  # Imported if you need to set _attr_state_class
 )
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 

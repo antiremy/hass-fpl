@@ -34,13 +34,13 @@ from .sensor_DailyUsageSensor import (
     FplDailyDeliveredReading,
     FplDailyReceivedReading,
 )
-#from .sensor_HourlyUsageSensor import (
+# from .sensor_HourlyUsageSensor import (
 #    FplHourlyUsageSensor,
 #    FplHourlyUsageKWHSensor,
 #    FplHourlyReceivedKWHSensor,
 #    FplHourlyDeliveredKWHSensor,
 #    FplHourlyReadingKWHSensor
-#)
+# )
 
 from .sensor_BalanceSensor import BalanceSensor
 
@@ -97,7 +97,7 @@ registerSensor(FplDailyDeliveredKWHSensor, ONLY_MAINREGION)
 registerSensor(FplDailyDeliveredReading, ONLY_MAINREGION)
 registerSensor(FplDailyReceivedReading, ONLY_MAINREGION)
 
-#hourly sensors
+# hourly sensors
 # registerSensor(FplHourlyUsageSensor, ONLY_MAINREGION)
 # registerSensor(FplHourlyUsageKWHSensor, ONLY_MAINREGION)
 # registerSensor(FplHourlyReceivedKWHSensor, ONLY_MAINREGION)

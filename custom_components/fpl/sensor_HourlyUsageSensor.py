@@ -1,13 +1,8 @@
 """Hourly Usage Sensors"""
-from datetime import timedelta, datetime
 
 # Modern imports:
-from homeassistant.components.sensor import (
-    SensorEntity,
-    SensorDeviceClass,
-    SensorStateClass,
-)
-from homeassistant.components.recorder import StatisticMetaData  # If you need statistic metadata
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
+
 
 from .fplEntity import FplEnergyEntity, FplMoneyEntity
 
@@ -43,7 +38,7 @@ class FplHourlyUsageSensor(FplMoneyEntity):
 class FplHourlyUsageKWHSensor(FplEnergyEntity):
     """Hourly Usage KWh Sensor"""
 
-    # Decide if this is cumulative (TOTAL / TOTAL_INCREASING) 
+    # Decide if this is cumulative (TOTAL / TOTAL_INCREASING)
     # or a per-hour reading that resets each hour (MEASUREMENT).
     _attr_device_class = SensorDeviceClass.ENERGY
     _attr_state_class = SensorStateClass.MEASUREMENT
@@ -86,13 +81,6 @@ class FplHourlyReceivedKWHSensor(FplEnergyEntity):
 
     def __init__(self, coordinator, config, account):
         super().__init__(coordinator, config, account, "Hourly Received KWH")
-
-    # Example method if you want to provide statistic metadata:
-    def get_statistic_metadata(self) -> StatisticMetaData:
-        meta = super().get_statistic_metadata()
-        meta["has_sum"] = True
-        meta["has_mean"] = True
-        return meta
 
     @property
     def statistic_id(self) -> str:

@@ -1,12 +1,9 @@
 """Daily Usage Sensors"""
+
 from datetime import timedelta, datetime
 
 # Updated imports:
-from homeassistant.components.sensor import (
-    SensorEntity,
-    SensorDeviceClass,
-    SensorStateClass,
-)
+from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
 
 from .fplEntity import FplEnergyEntity, FplMoneyEntity
 
@@ -17,7 +14,7 @@ class FplDailyUsageSensor(FplMoneyEntity):
     # If this sensor represents the cost *just for today* (not cumulative),
     # then use MEASUREMENT. If it's a cumulative total cost so far, use TOTAL_INCREASING.
     _attr_device_class = SensorDeviceClass.MONETARY
-    _attr_state_class = SensorStateClass.MEASUREMENT
+    # _attr_state_class = SensorStateClass.MEASUREMENT
 
     def __init__(self, coordinator, config, account):
         super().__init__(coordinator, config, account, "Daily Usage")
