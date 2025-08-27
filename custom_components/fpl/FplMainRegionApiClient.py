@@ -203,7 +203,9 @@ class FplMainRegionApiClient:
         # data.update(await self.__getDataFromEnergyServiceHourly(account, premise, meterno))
 
         # data.update(await self.__getDataFromApplianceUsage(account, currentBillDate))
-        data.update(await self.__getDataFromBalance(account))
+
+        # Gets the account balance and past due status.
+        data.update(await self.get_account_details(account))
 
         return data
 
@@ -404,28 +406,20 @@ class FplMainRegionApiClient:
     ) -> dict:
         _LOGGER.info("Getting energy service data")
 
-        date = str(lastBilledDate.strftime("%m%d%Y"))
+        # Tested using MITM proxy and iOS app. 
+        # This is the payload and url used by the iOS app.
         json = {
+            "status": "2",
             "accountType": "RESIDENTIAL",
-            "amrFlag": "Y",
-            "applicationPage": "resDashBoard",
-            "billComparisionFlag": False,
-            "channel": "WEB",
-            "endDate": "",
-            "frequencyType": "Daily",
-            "lastBilledDate": date,
-            "meterNo": meterno,
-            "monthlyFlag": True,
             "premiseNumber": premise,
-            "projectedBillFlag": False,
+            "lastBilledDate": lastBilledDate.strftime("%m%d%Y"),
+            "amrFlag": "Y",
             "revCode": "1",
-            "startDate": "",
-            "status": 2,
+            "meterNo": meterno
         }
         URL_ENERGY_SERVICE = (
             API_HOST
-            # + "/dashboard-api/resources/account/{account}/energyService/{account}"
-            + "/cs/customer/v1/energydashboard/resources/account/{account}/res-energy-service"
+            + "/cs/customer/v1/energydashboard/resources/energy-usage/account/{account}/mobile-energy-service"
         )
 
         data = {}
@@ -448,13 +442,20 @@ class FplMainRegionApiClient:
                     if "CurrentUsage" not in r.keys():
                         return {}
 
-                    currentUsage = r["CurrentUsage"]
-                    data["projectedKWH"] = currentUsage["projectedKWH"]
-                    data["dailyAverageKWH"] = float(currentUsage["dailyAverageKWH"])
-                    data["billToDateKWH"] = float(currentUsage["billToDateKWH"])
-                    data["recMtrReading"] = int(currentUsage["recMtrReading"] or 0)
-                    data["delMtrReading"] = int(currentUsage["delMtrReading"] or 0)
-                    data["billStartDate"] = currentUsage["billStartDate"]
+                    current_usage = r["CurrentUsage"]
+                    data["projectedKWH"] = int(current_usage.get("projectedKWH"))
+                    data["dailyAverageKWH"] = float(current_usage.get("dailyAverageKWH"))
+                    data["billToDateKWH"] = float(current_usage.get("billToDateKWH"))
+                    data["recMtrReading"] = int(current_usage.get("recMtrReading", 0))
+                    data["delMtrReading"] = int(current_usage.get("delMtrReading", 0))
+                    data["billStartDate"] = datetime.strptime(current_usage.get("billStartDate"), "%m-%d-%Y").date()
+                    data["billEndDate"] = datetime.strptime(current_usage.get("billEndDate"), "%m-%d-%Y").date()
+
+                    # For future improvements, we can also get the "DailyUsage" and "HourlyUsage" from this same response.
+                    # hourly_usage = r["HourlyUsage"]
+                    # daily_usage = r["DailyUsage"]
+
+
         except Exception as e:
             _LOGGER.error(e)
 
@@ -586,32 +587,35 @@ class FplMainRegionApiClient:
 
         return {"energy_percent_by_applicance": data}
 
-    async def __getDataFromBalance(self, account) -> dict:
-        """get balance data"""
-        _LOGGER.info("Getting Balance data")
+    async def get_account_details(self, account_number: str) -> dict:
+        """Get accounts"""
+
+        _LOGGER.info("Getting accounts")
 
         data = {}
 
-        URL_BALANCE = API_HOST + "/api/resources/account/{account}/balance?count=-1"
+        ACCOUNTS_URL = API_HOST + "/cs/customer/v1/multiaccount/resources/userId/current/accounts?contactFlag=N&count=5&view=profileAccountsList"
 
         try:
             headers = {}
             if hasattr(self, "jwt_token") and self.jwt_token:
                 headers["jwttoken"] = self.jwt_token
             async with async_timeout.timeout(TIMEOUT):
-                response = await self.session.get(
-                    URL_BALANCE.format(account=account), headers=headers
-                )
+                response = await self.session.get(ACCOUNTS_URL, headers=headers)
                 if response.status == 200:
-                    data = (await response.json())["data"]
+                    json_data = await response.json()
+                    data = json_data["data"]
 
-                    # indice = [i for i, x in enumerate(data) if x["details"] == "DEBT"][
-                    #    0
-                    # ]
+                    for account in data["data"]:
+                        if account["accountNumber"] == account_number:
+                            return account
 
-                    # deb = data[indice]["amount"]
-
+                    data["balance"] = float(account["balance"])
+                    data["pastDue"] = bool(account["pastDue"])
+                    # There a more fields available in the response, but none that seem to be useful.
+                    # For example, deposit, statusCategory (ex, OPEN, CLOSED), and property address.
+                    
         except Exception as e:
             _LOGGER.error(e)
 
-        return {"balance_data": data}
+        return data
