@@ -459,6 +459,11 @@ class FplMainRegionApiClient:
                             data["DailyUsage"]["readTime"] = datetime.fromisoformat(day_usage.get("readTime"))
                             data["DailyUsage"]["reading"] = float(day_usage.get("reading"))
 
+                            # This is most likely not going to work, as this endpoint does not give any information related to delivery metrics.
+                            # TODO: Figure out where the delivery metrics can be grabbed from.
+                            data["DailyUsage"]["netDeliveredKwh"] = float(day_usage.get("netDeliveredKwh") or 0)
+                            data["DailyUsage"]["netDeliveredReading"] = float(day_usage.get("netDeliveredReading") or 0)
+
                     data["HourlyUsage"] = {}
 
         except Exception as e:
