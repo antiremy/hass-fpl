@@ -164,8 +164,3 @@ class FplDailyDeliveredReading(FplEnergyEntity):
         data = self.getData("DailyUsage")
         self._attr_native_value = data["reading"]
         return self._attr_native_value
-
-    @property
-    def last_reset(self) -> datetime:
-        data = self.getData("DailyUsage")
-        return data["readTime"] - timedelta(days=1)
