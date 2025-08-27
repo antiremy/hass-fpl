@@ -434,8 +434,9 @@ class FplMainRegionApiClient:
                     headers=headers,
                 )
                 if response.status == 200:
-                    json_data = await response.json()["data"]
-
+                    response_data = await response.json()
+                    json_data = response_data["data"]
+                    
                     current_usage = json_data["CurrentUsage"]
                     data["projectedKWH"] = int(current_usage.get("projectedKWH"))
                     data["dailyAverageKWH"] = float(current_usage.get("dailyAverageKWH"))
@@ -453,8 +454,8 @@ class FplMainRegionApiClient:
                         # We want to get the last day's usage and use that as the sensor information.
                         # Given that this sensor should reset every day to the previous day's usage.
                         if day_usage["date"] == last_day_usage:
-                            data["DailyUsage"]["kwhActual"] = float(day_usage.get("kwhActual"))
-                            data["DailyUsage"]["billingCharge"] = float(day_usage.get("billingCharge"))
+                            data["DailyUsage"]["kwhActual"] = float(day_usage.get("kwhActual") or 0)
+                            data["DailyUsage"]["billingCharge"] = float(day_usage.get("billingCharge") or 0)
                             data["DailyUsage"]["readTime"] = datetime.fromisoformat(day_usage.get("readTime"))
                             data["DailyUsage"]["reading"] = float(day_usage.get("reading"))
 
