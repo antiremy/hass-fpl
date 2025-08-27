@@ -434,27 +434,31 @@ class FplMainRegionApiClient:
                     headers=headers,
                 )
                 if response.status == 200:
-                    rd = await response.json()
-                    if "data" not in rd.keys():
-                        return {}
+                    json_data = await response.json()["data"]
 
-                    r = rd["data"]
-                    if "CurrentUsage" not in r.keys():
-                        return {}
-
-                    current_usage = r["CurrentUsage"]
+                    current_usage = json_data["CurrentUsage"]
                     data["projectedKWH"] = int(current_usage.get("projectedKWH"))
                     data["dailyAverageKWH"] = float(current_usage.get("dailyAverageKWH"))
                     data["billToDateKWH"] = float(current_usage.get("billToDateKWH"))
-                    data["recMtrReading"] = int(current_usage.get("recMtrReading", 0))
-                    data["delMtrReading"] = int(current_usage.get("delMtrReading", 0))
+                    data["recMtrReading"] = int(current_usage.get("recMtrReading") or 0)
+                    data["delMtrReading"] = int(current_usage.get("delMtrReading") or 0)
                     data["billStartDate"] = datetime.strptime(current_usage.get("billStartDate"), "%m-%d-%Y").date()
                     data["billEndDate"] = datetime.strptime(current_usage.get("billEndDate"), "%m-%d-%Y").date()
 
-                    # For future improvements, we can also get the "DailyUsage" and "HourlyUsage" from this same response.
-                    # hourly_usage = r["HourlyUsage"]
-                    # daily_usage = r["DailyUsage"]
+                    daily_usage = json_data["DailyUsage"]
+                    last_day_usage = daily_usage["endDate"]
 
+                    data["DailyUsage"] = {}
+                    for day_usage in daily_usage["data"]:
+                        # We want to get the last day's usage and use that as the sensor information.
+                        # Given that this sensor should reset every day to the previous day's usage.
+                        if day_usage["date"] == last_day_usage:
+                            data["DailyUsage"]["kwhActual"] = float(day_usage.get("kwhActual"))
+                            data["DailyUsage"]["billingCharge"] = float(day_usage.get("billingCharge"))
+                            data["DailyUsage"]["readTime"] = datetime.fromisoformat(day_usage.get("readTime"))
+                            data["DailyUsage"]["reading"] = float(day_usage.get("reading"))
+
+                    data["HourlyUsage"] = {}
 
         except Exception as e:
             _LOGGER.error(e)
