@@ -491,15 +491,11 @@ class FplMainRegionApiClient:
                             read_time = datetime.fromisoformat(hour_usage["readTime"])
                             data["HourlyUsage"].append(
                                 {
-                                    "hour": int(
-                                        read_time.hour
-                                    ),  # 1 - 24 (Where 1 = from 12AM to 1AM)
+                                    "hour": hour_usage.get("hour"),  # 1 - 24 (Where 1 = from 12AM to 1AM)
                                     "readTime": read_time,  # This is the end of the hour, for example 1AM.
-                                    "billingCharged": float(
-                                        hour_usage["billingCharged"]
-                                    ),
-                                    "kwhActual": float(hour_usage["kwhActual"]),
-                                    "reading": float(hour_usage["reading"]),
+                                    "billingCharged": hour_usage.get("billingCharged"),
+                                    "kwhActual": hour_usage["kwhActual"],
+                                    "reading": hour_usage["reading"],
                                 }
                             )
 
