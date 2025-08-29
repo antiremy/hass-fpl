@@ -71,7 +71,10 @@ class FplDataUpdateCoordinator(DataUpdateCoordinator):
             for account in data.get(CONF_ACCOUNTS, []):
                 hourly = data.get(account, {}).get("HourlyUsage")
                 if hourly:
-                    self._publish_hourly_statistics(account, hourly)
+                    try:
+                        self._publish_hourly_statistics(account, hourly)
+                    except Exception as e:
+                        _LOGGER.error(f"Error publishing hourly statistics for account {account}: {e}")
 
             return data
         except Exception as exception:
