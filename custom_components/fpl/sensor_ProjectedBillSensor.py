@@ -94,7 +94,10 @@ class BillToDateSensor(FplMoneyEntity):
     """Bill to date sensor"""
 
     _attr_device_class = SensorDeviceClass.MONETARY
-    _attr_state_class = SensorStateClass.TOTAL
+    # Since the total increases each day, we use TOTAL_INCREASING.
+    # As soon as the metric decreases any amount (ex. end of billing cycle), the metric is considered the start of a new total.
+    # https://developers.home-assistant.io/blog/2021/08/16/state_class_total/#state_class_total_increasing
+    _attr_state_class = SensorStateClass.TOTAL_INCREASING
 
     def __init__(self, coordinator, config, account):
         super().__init__(coordinator, config, account, "Bill To Date")
