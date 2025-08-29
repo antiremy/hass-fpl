@@ -6,7 +6,7 @@ from datetime import timedelta
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.components.recorder.statistics import async_add_external_statistics
 from homeassistant.core import HomeAssistant
-
+from homeassistant.util import dt_util
 
 from .fplapi import FplApi
 from .const import DOMAIN, CONF_ACCOUNTS
@@ -35,17 +35,31 @@ class FplDataUpdateCoordinator(DataUpdateCoordinator):
 
         cost_stats = []
         usage_stats = []
-        for h in hourly:
+        for h in sorted(hourly, key=lambda x: x.get("readTime")):
             cost = h.get("billingCharged")
             usage = h.get("kwhActual")
             read_time = h.get("readTime")
             if read_time is None:
                 continue
+
+            # Align to the start of the hour in UTC
+            rt_utc = dt_util.as_utc(read_time)
+            aligned_end = rt_utc.replace(minute=0, second=0, microsecond=0)
+            if rt_utc == aligned_end:
+                start = aligned_end - timedelta(hours=1)
+            else:
+                start = aligned_end  # treat the aligned hour as the bin start
+
+            if cost is not None and float(cost) >= 0:
+                cost_stats.append({"start": start, "sum": float(cost)})
+            if usage is not None and float(usage) >= 0:
+                usage_stats.append({"start": start, "sum": float(usage)})
+
             start = read_time - timedelta(hours=1)
             if cost is not None:
-                cost_stats.append({"start": start, "sum": float(cost)})
+                cost_stats.append({"start": start, "sum": cost})
             if usage is not None:
-                usage_stats.append({"start": start, "sum": float(usage)})
+                usage_stats.append({"start": start, "sum": usage})
 
         if cost_stats:
             metadata = base_metadata.copy()
