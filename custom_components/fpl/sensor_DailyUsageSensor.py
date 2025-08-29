@@ -24,12 +24,12 @@ class FplDailyUsageSensor(FplMoneyEntity):
         data = self.getData("DailyUsage")
         self._attr_native_value = data["billingCharge"]
         return self._attr_native_value
-    
+
     @property
     def last_reset(self) -> datetime:
         data = self.getData("DailyUsage")
         # Given that the readTime happens at midnight, we can use the previous day's readTime as the last reset.
-        # The assumption here is that it is always at midnight. 
+        # The assumption here is that it is always at midnight.
         # But we can always get the previous day's readTime if this assumption proves to be incorrect.
         return data["readTime"] - timedelta(days=1)
 
@@ -65,7 +65,7 @@ class FplDailyUsageKWHSensor(FplEnergyEntity):
         """An optional last_reset property for daily totals."""
         data = self.getData("DailyUsage")
         # Given that the readTime happens at midnight, we can use the previous day's readTime as the last reset.
-        # The assumption here is that it is always at midnight. 
+        # The assumption here is that it is always at midnight.
         # But we can always get the previous day's readTime if this assumption proves to be incorrect.
         return data["readTime"] - timedelta(days=1)
 

@@ -1,4 +1,5 @@
 """Home Assistant Fpl integration Config Flow"""
+
 from collections import OrderedDict
 
 import voluptuous as vol
@@ -48,9 +49,7 @@ class FplFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Initialize."""
         self._errors = {}
 
-    async def async_step_user(
-        self, user_input=None
-    ):  # pylint: disable=dangerous-default-value
+    async def async_step_user(self, user_input=None):  # pylint: disable=dangerous-default-value
         """Handle a flow initialized by the user."""
         self._errors = {}
 

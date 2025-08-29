@@ -1,4 +1,5 @@
 """FPL Northwest data collection api client"""
+
 from datetime import datetime, timedelta
 import logging
 import async_timeout

@@ -1,4 +1,5 @@
 """AWS SRP"""
+
 import os
 import base64
 import binascii
@@ -103,7 +104,6 @@ def calculate_u(big_a, big_b):
 
 
 class AWSSRP(object):
-
     NEW_PASSWORD_REQUIRED_CHALLENGE = "NEW_PASSWORD_REQUIRED"
     PASSWORD_VERIFIER_CHALLENGE = "PASSWORD_VERIFIER"
 

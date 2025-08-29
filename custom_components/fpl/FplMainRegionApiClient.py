@@ -406,7 +406,7 @@ class FplMainRegionApiClient:
     ) -> dict:
         _LOGGER.info("Getting energy service data")
 
-        # Tested using MITM proxy and iOS app. 
+        # Tested using MITM proxy and iOS app.
         # This is the payload and url used by the iOS app.
         json = {
             "status": "2",
@@ -415,7 +415,7 @@ class FplMainRegionApiClient:
             "lastBilledDate": lastBilledDate.strftime("%m%d%Y"),
             "amrFlag": "Y",
             "revCode": "1",
-            "meterNo": meterno
+            "meterNo": meterno,
         }
         URL_ENERGY_SERVICE = (
             API_HOST
@@ -436,15 +436,21 @@ class FplMainRegionApiClient:
                 if response.status == 200:
                     response_data = await response.json()
                     json_data = response_data["data"]
-                    
+
                     current_usage = json_data["CurrentUsage"]
                     data["projectedKWH"] = int(current_usage.get("projectedKWH"))
-                    data["dailyAverageKWH"] = float(current_usage.get("dailyAverageKWH"))
+                    data["dailyAverageKWH"] = float(
+                        current_usage.get("dailyAverageKWH")
+                    )
                     data["billToDateKWH"] = float(current_usage.get("billToDateKWH"))
                     data["recMtrReading"] = int(current_usage.get("recMtrReading") or 0)
                     data["delMtrReading"] = int(current_usage.get("delMtrReading") or 0)
-                    data["billStartDate"] = datetime.strptime(current_usage.get("billStartDate"), "%m-%d-%Y").date()
-                    data["billEndDate"] = datetime.strptime(current_usage.get("billEndDate"), "%m-%d-%Y").date()
+                    data["billStartDate"] = datetime.strptime(
+                        current_usage.get("billStartDate"), "%m-%d-%Y"
+                    ).date()
+                    data["billEndDate"] = datetime.strptime(
+                        current_usage.get("billEndDate"), "%m-%d-%Y"
+                    ).date()
 
                     daily_usage = json_data["DailyUsage"]
                     last_day_usage = daily_usage["endDate"]
@@ -454,17 +460,42 @@ class FplMainRegionApiClient:
                         # We want to get the last day's usage and use that as the sensor information.
                         # Given that this sensor should reset every day to the previous day's usage.
                         if day_usage["date"] == last_day_usage:
-                            data["DailyUsage"]["kwhActual"] = float(day_usage.get("kwhActual") or 0)
-                            data["DailyUsage"]["billingCharge"] = float(day_usage.get("billingCharge") or 0)
-                            data["DailyUsage"]["readTime"] = datetime.fromisoformat(day_usage.get("readTime"))
-                            data["DailyUsage"]["reading"] = float(day_usage.get("reading"))
+                            data["DailyUsage"]["kwhActual"] = float(
+                                day_usage.get("kwhActual") or 0
+                            )
+                            data["DailyUsage"]["billingCharge"] = float(
+                                day_usage.get("billingCharge") or 0
+                            )
+                            data["DailyUsage"]["readTime"] = datetime.fromisoformat(
+                                day_usage.get("readTime")
+                            )
+                            data["DailyUsage"]["reading"] = float(
+                                day_usage.get("reading")
+                            )
 
                             # This is most likely not going to work, as this endpoint does not give any information related to delivery metrics.
                             # TODO: Figure out where the delivery metrics can be grabbed from.
-                            data["DailyUsage"]["netDeliveredKwh"] = float(day_usage.get("netDeliveredKwh") or 0)
-                            data["DailyUsage"]["netDeliveredReading"] = float(day_usage.get("netDeliveredReading") or 0)
+                            data["DailyUsage"]["netDeliveredKwh"] = float(
+                                day_usage.get("netDeliveredKwh") or 0
+                            )
+                            data["DailyUsage"]["netDeliveredReading"] = float(
+                                day_usage.get("netDeliveredReading") or 0
+                            )
 
-                    data["HourlyUsage"] = {}
+                    data["HourlyUsage"] = []
+                    hourly_usage = json_data["HourlyUsage"]
+                    if hourly_usage and "data" in hourly_usage:
+                        for hour_usage in hourly_usage[0]["data"]:
+                            read_time = datetime.fromisoformat(hour_usage["readTime"])
+                            data["HourlyUsage"].append(
+                                {
+                                    "hour": int(read_time.hour),  # 1 - 24 (Where 1 = from 12AM to 1AM)
+                                    "readTime": read_time,  # This is the end of the hour, for example 1AM.
+                                    "billingCharged": float(hour_usage["billingCharged"]),
+                                    "kwhActual": float(hour_usage["kwhActual"]),
+                                    "reading": float(hour_usage["reading"]),
+                                }
+                            )
 
         except Exception as e:
             _LOGGER.error(e)
@@ -604,7 +635,10 @@ class FplMainRegionApiClient:
 
         data = {}
 
-        ACCOUNTS_URL = API_HOST + "/cs/customer/v1/multiaccount/resources/userId/current/accounts?contactFlag=N&count=5&view=profileAccountsList"
+        ACCOUNTS_URL = (
+            API_HOST
+            + "/cs/customer/v1/multiaccount/resources/userId/current/accounts?contactFlag=N&count=5&view=profileAccountsList"
+        )
 
         try:
             headers = {}
@@ -624,10 +658,8 @@ class FplMainRegionApiClient:
                     data["pastDue"] = bool(account["pastDue"])
                     # There a more fields available in the response, but none that seem to be useful.
                     # For example, deposit, statusCategory (ex, OPEN, CLOSED), and property address.
-                    
+
         except Exception as e:
             _LOGGER.error(e)
 
         return data
-
-

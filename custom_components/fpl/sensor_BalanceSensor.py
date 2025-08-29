@@ -1,4 +1,5 @@
 """Balance sensors"""
+
 from .fplEntity import FplMoneyEntity
 
 
@@ -14,7 +15,5 @@ class BalanceSensor(FplMoneyEntity):
         return self._attr_native_value
 
     def customAttributes(self):
-        attributes = {
-            "pastDue": self.getData("pastDue")
-        }
+        attributes = {"pastDue": self.getData("pastDue")}
         return attributes

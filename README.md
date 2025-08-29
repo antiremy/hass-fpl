@@ -7,6 +7,14 @@ Platform | Description
 `sensor` | Show info from Fpl data.
 
 
+## Development
+
+This repo uses `uv` for Python package dependencies. 
+
+1. Install `uv` following these [instructions](https://docs.astral.sh/uv/getting-started/installation/).
+2. Run `uv venv`
+3. Run `uv sync`
+
 ## Installation
 
 1. Using the tool of choice open the directory (folder) for your HA configuration (where you find `configuration.yaml`).
@@ -20,6 +28,7 @@ Platform | Description
 
 # Compatible with HACS
 Please follow directions [here](https://hacs.xyz/docs/faq/custom_repositories/), and use https://github.com/dotKrad/hass-fpl as the repository URL.
+
 ## Contributions are welcome!
 
 If you want to contribute to this please read the [Contribution guidelines](CONTRIBUTING.md)
