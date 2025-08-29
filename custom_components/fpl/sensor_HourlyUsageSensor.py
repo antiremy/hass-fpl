@@ -11,7 +11,7 @@ class FplHourlyUsageSensor(FplMoneyEntity):
     """Hourly Usage Cost Sensor (monetary)"""
 
     _attr_device_class = SensorDeviceClass.MONETARY
-    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_state_class = SensorStateClass.TOTAL
 
     def __init__(self, coordinator, config, account):
         super().__init__(coordinator, config, account, "Hourly Cost")
@@ -46,7 +46,7 @@ class FplHourlyUsageKWHSensor(FplEnergyEntity):
     """
 
     _attr_device_class = SensorDeviceClass.ENERGY
-    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_state_class = SensorStateClass.TOTAL
 
     def __init__(self, coordinator, config, account):
         super().__init__(coordinator, config, account, "Hourly Usage KWH")
