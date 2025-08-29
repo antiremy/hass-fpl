@@ -50,7 +50,7 @@ class FplDataUpdateCoordinator(DataUpdateCoordinator):
         if cost_stats:
             metadata = base_metadata.copy()
             metadata["name"] = f"FPL {account} Hourly Cost"
-            metadata["statistic_id"] = f"sensor:{DOMAIN}_{account}_hourly_cost"
+            metadata["statistic_id"] = f"{DOMAIN}:{account}_hourly_cost"
             metadata["unit_of_measurement"] = "USD"
 
             async_add_external_statistics(self.hass, metadata, cost_stats)
@@ -58,7 +58,7 @@ class FplDataUpdateCoordinator(DataUpdateCoordinator):
         if usage_stats:
             metadata = base_metadata.copy()
             metadata["name"] = f"FPL {account} Hourly Usage"
-            metadata["statistic_id"] = f"sensor:{DOMAIN}_{account}_hourly_usage"
+            metadata["statistic_id"] = f"{DOMAIN}:{account}_hourly_usage"
             metadata["unit_of_measurement"] = "kWh"
 
             async_add_external_statistics(self.hass, metadata, usage_stats)
