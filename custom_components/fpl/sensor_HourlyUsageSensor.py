@@ -30,10 +30,14 @@ class FplHourlyUsageSensor(FplMoneyEntity):
     def customAttributes(self):
         """Return any additional attributes."""
         data = self.getData("HourlyUsage")
-        return {
-            "date": data[-1]["readTime"],
-            "hour": data[-1]["hour"],
-        } if data else {}
+        return (
+            {
+                "date": data[-1]["readTime"],
+                "hour": data[-1]["hour"],
+            }
+            if data
+            else {}
+        )
 
 
 class FplHourlyUsageKWHSensor(FplEnergyEntity):
@@ -54,21 +58,25 @@ class FplHourlyUsageKWHSensor(FplEnergyEntity):
     @property
     def statistic_id(self):
         return f"{DOMAIN}:{self.account}:hourly_usage"
-    
+
     @property
     def native_value(self):
         data = self.getData("HourlyUsage")
         if data:
             self._attr_native_value = data[-1]["kwhActual"]
         return self._attr_native_value
-    
+
     def customAttributes(self):
         """Return any additional attributes."""
         data = self.getData("HourlyUsage")
-        return {
-            "date": data[-1]["readTime"],
-            "hour": data[-1]["hour"],
-        } if data else {}
+        return (
+            {
+                "date": data[-1]["readTime"],
+                "hour": data[-1]["hour"],
+            }
+            if data
+            else {}
+        )
 
 
 # class FplHourlyReceivedKWHSensor(FplEnergyEntity):

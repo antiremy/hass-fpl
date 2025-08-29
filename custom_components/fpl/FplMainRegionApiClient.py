@@ -484,14 +484,20 @@ class FplMainRegionApiClient:
 
                     data["HourlyUsage"] = []
                     hourly_usage = json_data["HourlyUsage"]
-                    if hourly_usage and "data" in hourly_usage:
-                        for hour_usage in hourly_usage[0]["data"]:
+                    if hourly_usage:
+                        hourly_usage = hourly_usage[0]
+                    if "data" in hourly_usage:
+                        for hour_usage in hourly_usage["data"]:
                             read_time = datetime.fromisoformat(hour_usage["readTime"])
                             data["HourlyUsage"].append(
                                 {
-                                    "hour": int(read_time.hour),  # 1 - 24 (Where 1 = from 12AM to 1AM)
+                                    "hour": int(
+                                        read_time.hour
+                                    ),  # 1 - 24 (Where 1 = from 12AM to 1AM)
                                     "readTime": read_time,  # This is the end of the hour, for example 1AM.
-                                    "billingCharged": float(hour_usage["billingCharged"]),
+                                    "billingCharged": float(
+                                        hour_usage["billingCharged"]
+                                    ),
                                     "kwhActual": float(hour_usage["kwhActual"]),
                                     "reading": float(hour_usage["reading"]),
                                 }

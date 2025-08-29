@@ -35,11 +35,11 @@ from .sensor_DailyUsageSensor import (
     FplDailyReceivedReading,
 )
 from .sensor_HourlyUsageSensor import (
-   FplHourlyUsageSensor,
-   FplHourlyUsageKWHSensor,
-#    FplHourlyReceivedKWHSensor,
-#    FplHourlyDeliveredKWHSensor,
-#    FplHourlyReadingKWHSensor
+    FplHourlyUsageSensor,
+    FplHourlyUsageKWHSensor,
+    #    FplHourlyReceivedKWHSensor,
+    #    FplHourlyDeliveredKWHSensor,
+    #    FplHourlyReadingKWHSensor
 )
 
 from .sensor_BalanceSensor import BalanceSensor
