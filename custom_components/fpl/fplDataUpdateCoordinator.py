@@ -6,7 +6,7 @@ from datetime import timedelta
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 from homeassistant.components.recorder.statistics import async_add_external_statistics
 from homeassistant.core import HomeAssistant
-from homeassistant.util import dt_util
+from homeassistant.util import dt as dt_util
 
 from .fplapi import FplApi
 from .const import DOMAIN, CONF_ACCOUNTS
