@@ -42,6 +42,12 @@ from .sensor_HourlyUsageSensor import (
     #    FplHourlyReadingKWHSensor
 )
 
+from .sensor_ApplianceUsageSensor import (
+    CoolingCostSensor,
+    CoolingUsageSensor,
+)
+
+
 from .sensor_BalanceSensor import BalanceSensor
 
 from .const import CONF_ACCOUNTS, CONF_TERRITORY, DOMAIN, FPL_MAINREGION, FPL_NORTHWEST
@@ -106,6 +112,10 @@ registerSensor(FplHourlyUsageKWHSensor, ONLY_MAINREGION)
 
 # Balance sensors
 registerSensor(BalanceSensor, ONLY_MAINREGION)
+
+# Appliance sensors
+registerSensor(CoolingCostSensor, ONLY_MAINREGION)
+registerSensor(CoolingUsageSensor, ONLY_MAINREGION)
 
 
 async def async_setup_entry(hass, entry, async_add_devices):
