@@ -395,7 +395,7 @@ class FplMainRegionApiClient:
 
         URL_APPLIANCE_USAGE = (
             API_HOST
-            + "cs/customer/v1/energyanalyzer/resources/{account}/getDisaggResp"
+            + "/cs/customer/v1/energyanalyzer/resources/{account}/getDisaggResp"
         )
 
         JSON = {
