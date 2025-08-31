@@ -1,7 +1,7 @@
 """Average daily sensors"""
 
 from homeassistant.components.sensor import SensorDeviceClass, SensorStateClass
-from .fplEntity import FplMoneyEntity
+from .fplEntity import FplMoneyEntity, FplEnergyEntity
 
 from datetime import datetime
 
@@ -38,7 +38,7 @@ class ApplianceCostSensor(FplMoneyEntity):
         return attributes
     
 
-class ApplianceUsageSensor(FplMoneyEntity):
+class ApplianceUsageSensor(FplEnergyEntity):
     """Appliance Usage Sensor in KWH"""
 
     _attr_device_class = SensorDeviceClass.ENERGY
