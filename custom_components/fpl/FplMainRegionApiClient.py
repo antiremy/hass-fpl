@@ -158,14 +158,6 @@ class FplMainRegionApiClient:
         data["as_of_days"] = (today - currentBillDate).days
         data["remaining_days"] = (nextBillDate - today).days
 
-        # zip code
-        # zip_code = accountData["serviceAddress"]["zip"]
-
-        # projected bill
-        pbData = await self.__getFromProjectedBill(account, premise, currentBillDate)
-        data.update(pbData)
-
-        # programs
         programsData = account_data["programs"]["data"]
 
         programs = dict()
@@ -186,64 +178,52 @@ class FplMainRegionApiClient:
         else:
             data["budget_bill"] = False
 
-        # Get data from energy service
-        data.update(
-            await self.__getDataFromEnergyServiceDaily(
-                account, premise, currentBillDate, meterno
-            )
-        )
+        energy_service_data = await self.get_energy_usage(account, premise, currentBillDate, meterno)
+        data.update(energy_service_data)
 
-        data.update(
-            await self.__getDataFromEnergyService(
-                account, premise, currentBillDate, meterno
-            )
-        )
-
-        # Get data from energy service ( hourly )
-        # data.update(await self.__getDataFromEnergyServiceHourly(account, premise, meterno))
-
-        # data.update(await self.__getDataFromApplianceUsage(account, currentBillDate))
+        appliance_usage_data = await self.get_appliance_usage(account, premise)
+        data.update(appliance_usage_data)
 
         # Gets the account balance and past due status.
         data.update(await self.get_account_details(account))
 
         return data
 
-    async def __getFromProjectedBill(self, account, premise, currentBillDate) -> dict:
-        """get data from projected bill endpoint"""
-        data = {}
+    # async def __getFromProjectedBill(self, account, premise, currentBillDate) -> dict:
+    #     """get data from projected bill endpoint"""
+    #     data = {}
 
-        try:
-            headers = {}
-            if hasattr(self, "jwt_token") and self.jwt_token:
-                headers["jwttoken"] = self.jwt_token
-            async with async_timeout.timeout(TIMEOUT):
-                response = await self.session.get(
-                    URL_RESOURCES_PROJECTED_BILL.format(
-                        account=account,
-                        premise=premise,
-                        lastBillDate=currentBillDate.strftime("%m%d%Y"),
-                    ),
-                    headers=headers,
-                )
+    #     try:
+    #         headers = {}
+    #         if hasattr(self, "jwt_token") and self.jwt_token:
+    #             headers["jwttoken"] = self.jwt_token
+    #         async with async_timeout.timeout(TIMEOUT):
+    #             response = await self.session.get(
+    #                 URL_RESOURCES_PROJECTED_BILL.format(
+    #                     account=account,
+    #                     premise=premise,
+    #                     lastBillDate=currentBillDate.strftime("%m%d%Y"),
+    #                 ),
+    #                 headers=headers,
+    #             )
 
-            if response.status == 200:
-                projectedBillData = (await response.json())["data"]
+    #         if response.status == 200:
+    #             projectedBillData = (await response.json())["data"]
 
-                billToDate = float(projectedBillData["billToDate"])
-                projectedBill = float(projectedBillData["projectedBill"])
-                dailyAvg = float(projectedBillData["dailyAvg"])
-                avgHighTemp = int(projectedBillData["avgHighTemp"])
+    #             # billToDate = float(projectedBillData["billToDate"])
+    #             # projectedBill = float(projectedBillData["projectedBill"])
+    #             # dailyAvg = float(projectedBillData["dailyAvg"])
+    #             # avgHighTemp = int(projectedBillData["avgHighTemp"])
 
-                data["bill_to_date"] = billToDate
-                data["projected_bill"] = projectedBill
-                data["daily_avg"] = dailyAvg
-                data["avg_high_temp"] = avgHighTemp
+    #             # data["bill_to_date"] = billToDate
+    #             # data["projected_bill"] = projectedBill
+    #             # data["daily_avg"] = dailyAvg
+    #             # data["avg_high_temp"] = avgHighTemp
 
-        except Exception as e:
-            _LOGGER.error(e)
+    #     except Exception as e:
+    #         _LOGGER.error(e)
 
-        return data
+    #     return data
 
     async def __getBBL_async(self, account, projectedBillData) -> dict:
         """Get budget billing data"""
@@ -302,106 +282,7 @@ class FplMainRegionApiClient:
 
         return data
 
-    async def __getDataFromEnergyServiceDaily(
-        self, account, premise, lastBilledDate, meterno
-    ) -> dict:
-        _LOGGER.info("Getting energy service data: Daily")
-
-        date = str(lastBilledDate.strftime("%m%d%Y"))
-        json = {
-            "accountType": "RESIDENTIAL",
-            "amrFlag": "Y",
-            "applicationPage": "resDashBoard",
-            "billComparisionFlag": False,
-            "channel": "WEB",
-            "endDate": "",
-            "frequencyType": "Daily",
-            "lastBilledDate": date,
-            "meterNo": meterno,
-            "monthlyFlag": False,
-            "premiseNumber": premise,
-            "projectedBillFlag": False,
-            "revCode": "1",
-            "startDate": "",
-            "status": 2,
-        }
-        URL_ENERGY_SERVICE = (
-            API_HOST
-            # + "/dashboard-api/resources/account/{account}/energyService/{account}"
-            + "/cs/customer/v1/energydashboard/resources/account/{account}/res-energy-service"
-        )
-
-        data = {}
-        try:
-            headers = {}
-            if hasattr(self, "jwt_token") and self.jwt_token:
-                headers["jwttoken"] = self.jwt_token
-            async with async_timeout.timeout(TIMEOUT):
-                response = await self.session.post(
-                    URL_ENERGY_SERVICE.format(account=account),
-                    json=json,
-                    headers=headers,
-                )
-                if response.status == 200:
-                    rd = await response.json()
-                    if "data" not in rd.keys():
-                        return {}
-
-                    r = rd["data"]
-                    dailyUsage = []
-
-                    # totalPowerUsage = 0
-                    if "DailyUsage" in r and "data" in r["DailyUsage"]:
-                        dailyData = rd["data"]["DailyUsage"]["data"]
-                        for daily in dailyData:
-                            if daily["missingDay"] != "true":
-                                dailyUsage.append(
-                                    {
-                                        "usage": daily["kwhUsed"]
-                                        if "kwhUsed" in daily.keys()
-                                        else None,
-                                        "cost": daily["billingCharge"]
-                                        if "billingCharge" in daily.keys()
-                                        else None,
-                                        # "date": daily["date"],
-                                        "max_temperature": daily[
-                                            "averageHighTemperature"
-                                        ]
-                                        if "averageHighTemperature" in daily.keys()
-                                        else None,
-                                        "netDeliveredKwh": daily["netDeliveredKwh"]
-                                        if "netDeliveredKwh" in daily.keys()
-                                        else 0,
-                                        "netReceivedKwh": daily["netReceivedKwh"]
-                                        if "netReceivedKwh" in daily.keys()
-                                        else 0,
-                                        "netDeliveredReading": daily[
-                                            "netDeliveredReading"
-                                        ]
-                                        if "netDeliveredReading" in daily.keys()
-                                        else 0,
-                                        "netReceivedReading": daily[
-                                            "netReceivedReading"
-                                        ]
-                                        if "netReceivedReading" in daily.keys()
-                                        else 0,
-                                        "readTime": datetime.fromisoformat(
-                                            daily[
-                                                "readTime"
-                                            ]  # 2022-02-25T00:00:00.000-05:00
-                                        ),
-                                    }
-                                )
-                            # totalPowerUsage += int(daily["kwhUsed"])
-
-                        # data["total_power_usage"] = totalPowerUsage
-                        data["daily_usage"] = dailyUsage
-        except Exception as e:
-            _LOGGER.error(e)
-
-        return data
-
-    async def __getDataFromEnergyService(
+    async def get_energy_usage(
         self, account, premise, lastBilledDate, meterno
     ) -> dict:
         _LOGGER.info("Getting energy service data")
@@ -442,6 +323,10 @@ class FplMainRegionApiClient:
                     data["dailyAverageKWH"] = float(
                         current_usage.get("dailyAverageKWH")
                     )
+                    data["billToDate"] = float(current_usage.get("billToDate"))
+                    data["projectedBill"] = float(current_usage.get("projectedBill"))
+                    data["dailyAvg"] = float(current_usage.get("dailyAvg"))
+                    data["avgHighTemp"] = int(current_usage.get("avgHighTemp"))
                     data["billToDateKWH"] = float(current_usage.get("billToDateKWH"))
                     data["recMtrReading"] = int(current_usage.get("recMtrReading") or 0)
                     data["delMtrReading"] = int(current_usage.get("delMtrReading") or 0)
@@ -504,100 +389,19 @@ class FplMainRegionApiClient:
 
         return data
 
-    async def __getDataFromEnergyServiceHourly(self, account, premise, meterno) -> dict:
-        _LOGGER.info("Getting energy service hourly data")
-
-        today = str(datetime.now().strftime("%m%d%Y"))
-        JSON = {
-            "status": 2,
-            "channel": "WEB",
-            "amrFlag": "Y",
-            "accountType": "RESIDENTIAL",
-            "revCode": "1",
-            "premiseNumber": premise,
-            "meterNo": meterno,
-            "projectedBillFlag": False,
-            "billComparisionFlag": False,
-            "monthlyFlag": False,
-            "frequencyType": "Hourly",
-            "applicationPage": "resDashBoard",
-            "startDate": today,
-            "endDate": "",
-        }
-
-        URL_ENERGY_SERVICE = (
-            API_HOST
-            + "/dashboard-api/resources/account/{account}/energyService/{account}"
-        )
-
-        data = {}
-        try:
-            async with async_timeout.timeout(TIMEOUT):
-                response = await self.session.post(
-                    URL_ENERGY_SERVICE.format(account=account), json=JSON
-                )
-                if response.status == 200:
-                    rd = await response.json()
-                    if "data" not in rd.keys():
-                        return {}
-
-                    hourlyUsage = []
-
-                    # totalPowerUsage = 0
-                    if (
-                        "data" in rd.keys()
-                        and "HourlyUsage" in rd["data"]
-                        and "data" in rd["data"]["HourlyUsage"]
-                    ):
-                        hourlyData = rd["data"]["HourlyUsage"]["data"]
-                        for hourly in hourlyData:
-                            hourlyUsage.append(
-                                {
-                                    "usage": hourly["kwhUsed"]
-                                    if "kwhUsed" in hourly.keys()
-                                    else None,
-                                    "cost": hourly["billingCharged"]
-                                    if "billingCharged" in hourly.keys()
-                                    else None,
-                                    "temperature": hourly["temperature"]
-                                    if "temperature" in hourly.keys()
-                                    else None,
-                                    "netDelivered": hourly["netDelivered"]
-                                    if "netDelivered" in hourly.keys()
-                                    else 0,
-                                    "netReceived": hourly["netReceived"]
-                                    if "netReceived" in hourly.keys()
-                                    else 0,
-                                    "reading": hourly["reading"]
-                                    if "reading" in hourly.keys()
-                                    else 0,
-                                    "kwhActual": hourly["kwhActual"]
-                                    if "kwhActual" in hourly.keys()
-                                    else 0,
-                                    "readTime": datetime.fromisoformat(
-                                        hourly[
-                                            "readTime"
-                                        ]  # 2022-02-25T00:00:00.000-05:00
-                                    ),
-                                }
-                            )
-
-                        data["hourly_usage"] = hourlyUsage
-        except Exception as e:
-            _LOGGER.error(e)
-
-        return data
-
-    async def __getDataFromApplianceUsage(self, account, lastBilledDate) -> dict:
+    async def get_appliance_usage(self, account, premise) -> dict:
         """get data from appliance usage"""
         _LOGGER.info("Getting appliance usage data")
 
         URL_APPLIANCE_USAGE = (
             API_HOST
-            + "/dashboard-api/resources/account/{account}/applianceUsage/{account}"
+            + "cs/customer/v1/energyanalyzer/resources/{account}/getDisaggResp"
         )
 
-        JSON = {"startDate": str(lastBilledDate.strftime("%m%d%Y"))}
+        JSON = {
+            "premiseId": premise,
+            "accountNumber": account
+        }
         data = {}
 
         try:
@@ -611,24 +415,22 @@ class FplMainRegionApiClient:
                     headers=headers,
                 )
                 if response.status == 200:
-                    data = (await response.json())["data"]
-                    if "electric" in data:
-                        electric = data["electric"]
+                    response_json = await response.json()
+                    json_data = response_json["data"]
 
-                        full = 100
-                        for e in electric:
-                            rr = round(float(e["percentageDollar"]))
-                            if rr < full:
-                                full = full - rr
-                            else:
-                                rr = full
-                            data[e["category"].replace(" ", "_")] = rr
-                    else:
-                        _LOGGER.info("appliance usage data does not exist")
+                    bill_periods = json_data["billPeriods"]
+                    if bill_periods:
+                        for bill_period in bill_periods:
+                            # We only care about the latest bill period.
+                            # It appears that 1 is the latest, with 2 being two months ago, etc.
+                            if int(bill_period["billPeriod"]) == 1:
+                                data["appliance_usage"] = bill_period
+                                break
+
         except Exception as e:
             _LOGGER.error(e)
 
-        return {"energy_percent_by_applicance": data}
+        return data
 
     async def get_account_details(self, account_number: str) -> dict:
         """Get accounts"""
