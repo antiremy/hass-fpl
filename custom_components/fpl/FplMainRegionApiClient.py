@@ -134,6 +134,7 @@ class FplMainRegionApiClient:
         account_data = (await response.json())["data"]
 
         premise = account_data.get("premiseNumber").zfill(9)
+        data["premise"] = premise
 
         data["meterSerialNo"] = account_data["meterSerialNo"]
         # data["meterNo"] = account_data["meterNo"]
@@ -178,7 +179,9 @@ class FplMainRegionApiClient:
         else:
             data["budget_bill"] = False
 
-        energy_service_data = await self.get_energy_usage(account, premise, currentBillDate, meterno)
+        energy_service_data = await self.get_energy_usage(
+            account, premise, currentBillDate, meterno
+        )
         data.update(energy_service_data)
 
         appliance_usage_data = await self.get_appliance_usage(account, premise)
@@ -282,9 +285,7 @@ class FplMainRegionApiClient:
 
         return data
 
-    async def get_energy_usage(
-        self, account, premise, lastBilledDate, meterno
-    ) -> dict:
+    async def get_energy_usage(self, account, premise, lastBilledDate, meterno) -> dict:
         _LOGGER.info("Getting energy service data")
 
         # Tested using MITM proxy and iOS app.
@@ -367,23 +368,52 @@ class FplMainRegionApiClient:
                                 day_usage.get("netDeliveredReading") or 0
                             )
 
-                    data["HourlyUsage"] = []
-                    hourly_usage = json_data["HourlyUsage"]
-                    if hourly_usage:
-                        hourly_usage = hourly_usage[0]
-                    if "data" in hourly_usage:
-                        for hour_usage in hourly_usage["data"]:
-                            read_time = datetime.fromisoformat(hour_usage["readTime"])
-                            data["HourlyUsage"].append(
-                                {
-                                    "hour": hour_usage.get("hour"),  # 1 - 24 (Where 1 = from 12AM to 1AM)
-                                    "readTime": read_time,  # This is the end of the hour, for example 1AM.
-                                    "billingCharged": hour_usage.get("billingCharged"),
-                                    "kwhActual": hour_usage["kwhActual"],
-                                    "reading": hour_usage["reading"],
-                                }
-                            )
+        except Exception as e:
+            _LOGGER.error(e)
 
+        return data
+
+    async def get_hourly_usage(self, account, premise, date) -> list:
+        """get data from hourly usage for a specific date"""
+        _LOGGER.info("Getting hourly usage data")
+
+        URL_APPLIANCE_USAGE = (
+            API_HOST
+            + f"/cs/customer/v1/energydashboard/resources/energy-usage/account/{account}/mobile-hourly-usage"
+        )
+
+        JSON = {"premiseNumber": premise, "startDate": date.strftime("%m-%d-%Y")}
+
+        data = []
+        try:
+            headers = {}
+            if hasattr(self, "jwt_token") and self.jwt_token:
+                headers["jwttoken"] = self.jwt_token
+            async with async_timeout.timeout(TIMEOUT):
+                response = await self.session.post(
+                    URL_APPLIANCE_USAGE,
+                    json=JSON,
+                    headers=headers,
+                )
+                if response.status == 200:
+                    response_json = await response.json()
+                    json_data = response_json["data"]
+
+                    hourly_usage = json_data["HourlyUsage"]["data"]
+
+                    for hour_usage in hourly_usage:
+                        read_time = datetime.fromisoformat(hour_usage["readTime"])
+                        data.append(
+                            {
+                                "hour": hour_usage.get(
+                                    "hour"
+                                ),  # 1 - 24 (Where 1 = from 12AM to 1AM)
+                                "readTime": read_time,  # This is the end of the hour, for example 1AM.
+                                "billingCharged": hour_usage.get("billingCharged"),
+                                "kwhActual": hour_usage["kwhActual"],
+                                "reading": hour_usage["reading"],
+                            }
+                        )
         except Exception as e:
             _LOGGER.error(e)
 
@@ -398,10 +428,7 @@ class FplMainRegionApiClient:
             + "/cs/customer/v1/energyanalyzer/resources/{account}/getDisaggResp"
         )
 
-        JSON = {
-            "premiseId": premise,
-            "accountNumber": account
-        }
+        JSON = {"premiseId": premise, "accountNumber": account}
         data = {}
 
         try:

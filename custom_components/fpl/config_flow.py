@@ -26,7 +26,7 @@ from .fplapi import FplApi
 
 try:
     from .secrets import DEFAULT_CONF_PASSWORD, DEFAULT_CONF_USERNAME
-except:
+except Exception as _:
     pass
 
 

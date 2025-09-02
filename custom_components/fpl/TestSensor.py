@@ -18,7 +18,7 @@ class TestSensor(FplEntity):
         try:
             if self.getData("budget_bill"):
                 attributes["budget_bill"] = self.getData("budget_bill")
-        except:
+        except Exception as _:
             pass
 
         return attributes

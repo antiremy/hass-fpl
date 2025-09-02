@@ -45,6 +45,22 @@ from .sensor_HourlyUsageSensor import (
 from .sensor_ApplianceUsageSensor import (
     CoolingCostSensor,
     CoolingUsageSensor,
+    WaterHeaterCostSensor,
+    WaterHeaterUsageSensor,
+    LaundryCostSensor,
+    LaundryUsageSensor,
+    RefrigerationCostSensor,
+    RefrigerationUsageSensor,
+    PoolCostSensor,
+    PoolUsageSensor,
+    LightingCostSensor,
+    LightingUsageSensor,
+    EntertainmentCostSensor,
+    EntertainmentUsageSensor,
+    CookingCostSensor,
+    CookingUsageSensor,
+    MiscellaneousCostSensor,
+    MiscellaneousUsageSensor,
 )
 
 
@@ -116,6 +132,22 @@ registerSensor(BalanceSensor, ONLY_MAINREGION)
 # Appliance sensors
 registerSensor(CoolingCostSensor, ONLY_MAINREGION)
 registerSensor(CoolingUsageSensor, ONLY_MAINREGION)
+registerSensor(WaterHeaterCostSensor, ONLY_MAINREGION)
+registerSensor(WaterHeaterUsageSensor, ONLY_MAINREGION)
+registerSensor(LaundryCostSensor, ONLY_MAINREGION)
+registerSensor(LaundryUsageSensor, ONLY_MAINREGION)
+registerSensor(RefrigerationCostSensor, ONLY_MAINREGION)
+registerSensor(RefrigerationUsageSensor, ONLY_MAINREGION)
+registerSensor(PoolCostSensor, ONLY_MAINREGION)
+registerSensor(PoolUsageSensor, ONLY_MAINREGION)
+registerSensor(LightingCostSensor, ONLY_MAINREGION)
+registerSensor(LightingUsageSensor, ONLY_MAINREGION)
+registerSensor(EntertainmentCostSensor, ONLY_MAINREGION)
+registerSensor(EntertainmentUsageSensor, ONLY_MAINREGION)
+registerSensor(CookingCostSensor, ONLY_MAINREGION)
+registerSensor(CookingUsageSensor, ONLY_MAINREGION)
+registerSensor(MiscellaneousCostSensor, ONLY_MAINREGION)
+registerSensor(MiscellaneousUsageSensor, ONLY_MAINREGION)
 
 
 async def async_setup_entry(hass, entry, async_add_devices):
