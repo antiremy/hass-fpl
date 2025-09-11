@@ -1,4 +1,5 @@
 """Custom FPl api client"""
+
 import sys
 import json
 import logging

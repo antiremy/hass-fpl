@@ -15,7 +15,7 @@ class DailyAverageSensor(FplMoneyEntity):
 
     @property
     def native_value(self):
-        daily_avg = self.getData("daily_avg")
+        daily_avg = self.getData("dailyAvg")
         if daily_avg is not None:
             self._attr_native_value = daily_avg
         return self._attr_native_value
@@ -60,7 +60,7 @@ class ActualDailyAverageSensor(FplMoneyEntity):
 
     @property
     def native_value(self):
-        daily_avg = self.getData("daily_avg")
+        daily_avg = self.getData("dailyAvg")
         if daily_avg is not None:
             self._attr_native_value = daily_avg
         return self._attr_native_value

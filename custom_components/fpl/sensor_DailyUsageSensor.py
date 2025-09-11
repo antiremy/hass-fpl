@@ -21,18 +21,24 @@ class FplDailyUsageSensor(FplMoneyEntity):
 
     @property
     def native_value(self):
-        data = self.getData("daily_usage")
-        if data and len(data) > 0 and "cost" in data[-1]:
-            self._attr_native_value = data[-1]["cost"]
+        data = self.getData("DailyUsage")
+        self._attr_native_value = data["billingCharge"]
         return self._attr_native_value
+
+    @property
+    def last_reset(self) -> datetime:
+        data = self.getData("DailyUsage")
+        # Given that the readTime happens at midnight, we can use the previous day's readTime as the last reset.
+        # The assumption here is that it is always at midnight.
+        # But we can always get the previous day's readTime if this assumption proves to be incorrect.
+        return data["readTime"] - timedelta(days=1)
 
     def customAttributes(self):
         """Return the state attributes."""
-        data = self.getData("daily_usage")
-        attributes = {}
-
-        if data and len(data) > 0 and "readTime" in data[-1]:
-            attributes["date"] = data[-1]["readTime"]
+        data = self.getData("DailyUsage")
+        attributes = {
+            "date": data["readTime"].strftime("%Y-%m-%d"),
+        }
 
         return attributes
 
@@ -50,24 +56,25 @@ class FplDailyUsageKWHSensor(FplEnergyEntity):
 
     @property
     def native_value(self):
-        data = self.getData("daily_usage")
-        if data and len(data) > 0 and "usage" in data[-1]:
-            self._attr_native_value = data[-1]["usage"]
+        data = self.getData("DailyUsage")
+        self._attr_native_value = data["kwhActual"]
         return self._attr_native_value
 
     @property
-    def last_reset(self) -> datetime | None:
+    def last_reset(self) -> datetime:
         """An optional last_reset property for daily totals."""
-        data = self.getData("daily_usage")
-        if data and len(data) > 0 and "usage" in data[-1]:
-            date = data[-1]["readTime"]
-            return date - timedelta(days=1)
-        return None
+        data = self.getData("DailyUsage")
+        # Given that the readTime happens at midnight, we can use the previous day's readTime as the last reset.
+        # The assumption here is that it is always at midnight.
+        # But we can always get the previous day's readTime if this assumption proves to be incorrect.
+        return data["readTime"] - timedelta(days=1)
 
     def customAttributes(self):
         """Return any additional attributes."""
-        # Example: date or other details if needed
-        return {}
+        data = self.getData("DailyUsage")
+        return {
+            "date": data["readTime"].strftime("%Y-%m-%d"),
+        }
 
 
 class FplDailyReceivedKWHSensor(FplEnergyEntity):
@@ -81,25 +88,22 @@ class FplDailyReceivedKWHSensor(FplEnergyEntity):
 
     @property
     def native_value(self):
-        data = self.getData("daily_usage")
-        if data and len(data) > 0 and "netReceivedKwh" in data[-1]:
-            self._attr_native_value = data[-1]["netReceivedKwh"]
+        data = self.getData("DailyUsage")
+        self._attr_native_value = data["kwhActual"]
         return self._attr_native_value
 
     @property
     def last_reset(self) -> datetime | None:
-        data = self.getData("daily_usage")
-        if data and len(data) > 0 and "netReceivedKwh" in data[-1]:
-            date = data[-1]["readTime"]
-            return date - timedelta(days=1)
+        data = self.getData("DailyUsage")
+        return data["readTime"] - timedelta(days=1)
         return None
 
     def customAttributes(self):
         """Return any additional attributes."""
-        data = self.getData("daily_usage")
-        attributes = {}
-        if data and len(data) > 0 and "readTime" in data[-1]:
-            attributes["date"] = data[-1]["readTime"]
+        data = self.getData("DailyUsage")
+        attributes = {
+            "date": data["readTime"].strftime("%Y-%m-%d"),
+        }
         return attributes
 
 
@@ -114,25 +118,21 @@ class FplDailyDeliveredKWHSensor(FplEnergyEntity):
 
     @property
     def native_value(self):
-        data = self.getData("daily_usage")
-        if data and len(data) > 0 and "netDeliveredKwh" in data[-1]:
-            self._attr_native_value = data[-1]["netDeliveredKwh"]
+        data = self.getData("DailyUsage")
+        self._attr_native_value = data["netDeliveredKwh"]
         return self._attr_native_value
 
     @property
     def last_reset(self) -> datetime | None:
-        data = self.getData("daily_usage")
-        if data and len(data) > 0 and "netDeliveredKwh" in data[-1]:
-            date = data[-1]["readTime"]
-            return date - timedelta(days=1)
-        return None
+        data = self.getData("DailyUsage")
+        return data["readTime"] - timedelta(days=1)
 
     def customAttributes(self):
         """Return any additional attributes."""
-        data = self.getData("daily_usage")
-        attributes = {}
-        if data and len(data) > 0 and "readTime" in data[-1]:
-            attributes["date"] = data[-1]["readTime"]
+        data = self.getData("DailyUsage")
+        attributes = {
+            "date": data["readTime"].strftime("%Y-%m-%d"),
+        }
         return attributes
 
 
@@ -144,13 +144,12 @@ class FplDailyReceivedReading(FplEnergyEntity):
     _attr_device_class = SensorDeviceClass.ENERGY
 
     def __init__(self, coordinator, config, account):
-        super().__init__(coordinator, config, account, "Daily Received reading")
+        super().__init__(coordinator, config, account, "Daily Received Reading")
 
     @property
     def native_value(self):
-        data = self.getData("daily_usage")
-        if data and len(data) > 0 and "netReceivedReading" in data[-1]:
-            self._attr_native_value = data[-1]["netReceivedReading"]
+        data = self.getData("DailyUsage")
+        self._attr_native_value = data["reading"]
         return self._attr_native_value
 
 
@@ -165,7 +164,6 @@ class FplDailyDeliveredReading(FplEnergyEntity):
 
     @property
     def native_value(self):
-        data = self.getData("daily_usage")
-        if data and len(data) > 0 and "netDeliveredReading" in data[-1]:
-            self._attr_native_value = data[-1]["netDeliveredReading"]
+        data = self.getData("DailyUsage")
+        self._attr_native_value = data["netDeliveredReading"]
         return self._attr_native_value

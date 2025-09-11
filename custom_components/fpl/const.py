@@ -1,4 +1,5 @@
 """Constants for fpl."""
+
 #
 TIMEOUT = 5
 API_HOST = "https://www.fpl.com"
