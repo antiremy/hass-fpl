@@ -91,7 +91,7 @@ class FplMainRegionApiClient:
         Returns array with active account numbers
         """
         result = []
-        URL = API_HOST + "/api/resources/header"
+        URL = API_HOST + "/cs/customer/v1/resources/header"
         headers = {}
         if hasattr(self, "jwt_token") and self.jwt_token:
             headers["jwttoken"] = self.jwt_token
