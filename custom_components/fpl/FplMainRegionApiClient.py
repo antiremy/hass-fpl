@@ -25,18 +25,18 @@ URL_LOGIN = (
 )
 
 URL_BUDGET_BILLING_GRAPH = (
-    API_HOST + "/api/resources/account/{account}/budgetBillingGraph"
+    API_HOST + "/cs/customer/v1/accountservices/resources/account/{account}/budgetBillingGraph"
 )
 
 URL_RESOURCES_PROJECTED_BILL = (
     API_HOST
-    + "/api/resources/account/{account}/projectedBill"
+    + "/cs/customer/v1/accountservices/resources/account/{account}/projectedBill"
     + "?premiseNumber={premise}&lastBilledDate={lastBillDate}"
 )
 
 
 URL_BUDGET_BILLING_PREMISE_DETAILS = (
-    API_HOST + "/api/resources/account/{account}/budgetBillingGraph/premiseDetails"
+    API_HOST + "/cs/customer/v1/accountservices/resources/account/{account}/budgetBillingGraph/premiseDetails"
 )
 
 
@@ -123,7 +123,7 @@ class FplMainRegionApiClient:
         """Get data from resources endpoint"""
         data = {}
 
-        URL_RESOURCES_ACCOUNT = API_HOST + "/api/resources/account/{account}"
+        URL_RESOURCES_ACCOUNT = API_HOST + "/cs/customer/v1/accountservices/resources/account/{account}"
         headers = {}
         if hasattr(self, "jwt_token") and self.jwt_token:
             headers["jwttoken"] = self.jwt_token
