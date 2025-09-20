@@ -49,20 +49,27 @@ class FplDataUpdateCoordinator(DataUpdateCoordinator):
         result = await recorder.get_instance(self.hass).async_add_executor_job(_read)
 
         if rows := result.get(stat_id):
-            for row in rows:
-                start = dt_util.utc_from_timestamp(
-                    row["start"]
+            if before is not None:
+                for row in rows:
+                    start = dt_util.utc_from_timestamp(row["start"])
+                    if start + timedelta(hours=1) >= before:
+                        return float(row["sum"] or 0.0), start
+            else:
+                return float(rows[-1]["sum"] or 0.0), dt_util.utc_from_timestamp(
+                    rows[-1]["start"]
                 )
-                if start + timedelta(hours=1) >= before:
-                    return float(row["sum"] or 0.0), start
         return 0.0, None
 
     async def _publish_hourly_statistics(self, account: str, hourly: list) -> None:
         stat_id_usage = f"{DOMAIN}:{account}_hourly_usage"
         stat_id_cost = f"{DOMAIN}:{account}_hourly_cost"
 
-        usage_sum, last_usage_start = await self._get_last_sum(stat_id_usage)
-        cost_sum, last_cost_start = await self._get_last_sum(stat_id_cost)
+        usage_sum, last_usage_start = await self._get_last_sum(
+            stat_id_usage, hourly[0].get("readTime")
+        )
+        cost_sum, last_cost_start = await self._get_last_sum(
+            stat_id_cost, hourly[0].get("readTime")
+        )
 
         cost_stats = []
         usage_stats = []
@@ -130,7 +137,7 @@ class FplDataUpdateCoordinator(DataUpdateCoordinator):
                 premise = data.get(account, {}).get("premise")
                 # If there is already hourly usage statistics, then only backfill the yesterday.
                 _, last_sum_start = await self._get_last_sum(
-                    f"{DOMAIN}:{account}_hourly_usage"
+                    f"{DOMAIN}:{account}_hourly_usage",
                 )
                 if last_sum_start is not None:
                     date = datetime.now() - timedelta(days=1)
