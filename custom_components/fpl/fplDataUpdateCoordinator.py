@@ -63,6 +63,7 @@ class FplDataUpdateCoordinator(DataUpdateCoordinator):
 
         cost_stats = []
         usage_stats = []
+        _LOGGER.debug("Publishing hourly statistics: %s", hourly)
         for h in sorted(hourly, key=lambda x: x.get("readTime")):
             cost = h.get("billingCharged")
             usage = h.get("kwhActual")
