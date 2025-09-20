@@ -36,11 +36,11 @@ class FplDataUpdateCoordinator(DataUpdateCoordinator):
 
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=SCAN_INTERVAL)
 
-    async def _get_last_sum(self, stat_id: str):
+    async def _get_last_sum(self, stat_id: str, before: datetime):
         def _read():
             return get_last_statistics(
                 hass=self.hass,
-                number_of_stats=1,
+                number_of_stats=24,
                 statistic_id=stat_id,
                 convert_units=False,
                 types={"sum"},
@@ -49,9 +49,12 @@ class FplDataUpdateCoordinator(DataUpdateCoordinator):
         result = await recorder.get_instance(self.hass).async_add_executor_job(_read)
 
         if rows := result.get(stat_id):
-            return float(rows[0]["sum"] or 0.0), dt_util.utc_from_timestamp(
-                rows[0]["start"]
-            )
+            for row in rows:
+                start = dt_util.utc_from_timestamp(
+                    row["start"]
+                )
+                if start + timedelta(hours=1) >= before:
+                    return float(row["sum"] or 0.0), start
         return 0.0, None
 
     async def _publish_hourly_statistics(self, account: str, hourly: list) -> None:
@@ -63,10 +66,10 @@ class FplDataUpdateCoordinator(DataUpdateCoordinator):
 
         cost_stats = []
         usage_stats = []
-        _LOGGER.debug("Publishing hourly statistics: %s", hourly)
         for h in sorted(hourly, key=lambda x: x.get("readTime")):
             cost = h.get("billingCharged")
             usage = h.get("kwhActual")
+            reading = h.get("reading")
 
             read_time = h.get("readTime")
             if read_time is None:
@@ -76,24 +79,21 @@ class FplDataUpdateCoordinator(DataUpdateCoordinator):
             start = read_time - timedelta(hours=1)
 
             if cost is not None:
-                if not last_cost_start or start > last_cost_start:
-                    cost_sum += cost
-                    cost_stat = StatisticData(
-                        start=start,
-                        sum=cost_sum,
-                        state=cost,
-                    )
-                    cost_stats.append(cost_stat)
+                cost_sum += cost
+                cost_stat = StatisticData(
+                    start=start,
+                    sum=cost_sum,
+                    state=cost,
+                )
+                cost_stats.append(cost_stat)
 
             if usage is not None:
-                if not last_usage_start or start > last_usage_start:
-                    usage_sum += usage
-                    usage_stat = StatisticData(
-                        start=start,
-                        sum=usage_sum,
-                        state=usage,
-                    )
-                    usage_stats.append(usage_stat)
+                usage_stat = StatisticData(
+                    start=start,
+                    sum=reading,
+                    state=usage,
+                )
+                usage_stats.append(usage_stat)
 
         if cost_stats:
             metadata = StatisticMetaData(
@@ -132,25 +132,27 @@ class FplDataUpdateCoordinator(DataUpdateCoordinator):
                 _, last_sum_start = await self._get_last_sum(
                     f"{DOMAIN}:{account}_hourly_usage"
                 )
-
-                backfillDays = HOURLY_USAGE_BACKFILL_DAYS
-                
-                # Only backfill 2 days if we have existing data
                 if last_sum_start is not None:
-                    backfillDays = 2  
-
-                date = datetime.now() - timedelta(days=backfillDays)
-
-                all_hourly: list = []
-                for _ in range(backfillDays):
+                    date = datetime.now() - timedelta(days=1)
                     hourly = await self.api.apiClient.get_hourly_usage(
                         account, premise, date
                     )
-                    all_hourly.extend(hourly)
-                    date = date + timedelta(days=1)
-                    await asyncio.sleep(1)
-                if all_hourly:
-                    await self._publish_hourly_statistics(account, all_hourly)
+                    await self._publish_hourly_statistics(account, hourly)
+                else:
+                    # Only backfill the full amount of days if the account has no hourly usage statistics.
+                    # We need to start backwards. For example today - 360 days.
+                    date = datetime.now() - timedelta(days=HOURLY_USAGE_BACKFILL_DAYS)
+
+                    all_hourly: list = []
+                    for _ in range(HOURLY_USAGE_BACKFILL_DAYS):
+                        hourly = await self.api.apiClient.get_hourly_usage(
+                            account, premise, date
+                        )
+                        all_hourly.extend(hourly)
+                        date = date + timedelta(days=1)
+                        await asyncio.sleep(1)
+                    if all_hourly:
+                        await self._publish_hourly_statistics(account, all_hourly)
 
             return data
         except Exception as exception:
