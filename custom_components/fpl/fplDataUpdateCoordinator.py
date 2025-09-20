@@ -132,27 +132,25 @@ class FplDataUpdateCoordinator(DataUpdateCoordinator):
                 _, last_sum_start = await self._get_last_sum(
                     f"{DOMAIN}:{account}_hourly_usage"
                 )
+
+                backfillDays = HOURLY_USAGE_BACKFILL_DAYS
+                
+                # Only backfill 2 days if we have existing data
                 if last_sum_start is not None:
-                    date = datetime.now() - timedelta(days=1)
+                    backfillDays = 2  
+
+                date = datetime.now() - timedelta(days=backfillDays)
+
+                all_hourly: list = []
+                for _ in range(backfillDays):
                     hourly = await self.api.apiClient.get_hourly_usage(
                         account, premise, date
                     )
-                    await self._publish_hourly_statistics(account, hourly)
-                else:
-                    # Only backfill the full amount of days if the account has no hourly usage statistics.
-                    # We need to start backwards. For example today - 360 days.
-                    date = datetime.now() - timedelta(days=HOURLY_USAGE_BACKFILL_DAYS)
-
-                    all_hourly: list = []
-                    for _ in range(HOURLY_USAGE_BACKFILL_DAYS):
-                        hourly = await self.api.apiClient.get_hourly_usage(
-                            account, premise, date
-                        )
-                        all_hourly.extend(hourly)
-                        date = date + timedelta(days=1)
-                        await asyncio.sleep(1)
-                    if all_hourly:
-                        await self._publish_hourly_statistics(account, all_hourly)
+                    all_hourly.extend(hourly)
+                    date = date + timedelta(days=1)
+                    await asyncio.sleep(1)
+                if all_hourly:
+                    await self._publish_hourly_statistics(account, all_hourly)
 
             return data
         except Exception as exception:
