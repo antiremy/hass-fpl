@@ -36,7 +36,7 @@ class FplDataUpdateCoordinator(DataUpdateCoordinator):
 
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=SCAN_INTERVAL)
 
-    async def _get_last_sum(self, stat_id: str, before: datetime):
+    async def _get_last_sum(self, stat_id: str, before: datetime | None = None):
         def _read():
             return get_last_statistics(
                 hass=self.hass,
@@ -126,7 +126,7 @@ class FplDataUpdateCoordinator(DataUpdateCoordinator):
 
             async_add_external_statistics(self.hass, metadata, usage_stats)
 
-        return cost_sum, usage_sum
+        return
 
     async def _async_update_data(self):
         try:
