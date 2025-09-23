@@ -49,7 +49,7 @@ class FplDataUpdateCoordinator(DataUpdateCoordinator):
         result = await recorder.get_instance(self.hass).async_add_executor_job(_read)
 
         if rows := result.get(stat_id):
-            if before:
+            if before is not None:
                 for row in rows:
                     start = dt_util.utc_from_timestamp(row["start"])
                     if start <= before:
