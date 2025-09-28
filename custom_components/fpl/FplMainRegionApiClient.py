@@ -91,7 +91,7 @@ class FplMainRegionApiClient:
         Returns array with active account numbers
         """
         result = []
-        URL = API_HOST + "/api/resources/header"
+        URL = API_HOST + "/cs/customer/v1/resources/header"
         headers = {}
         if hasattr(self, "jwt_token") and self.jwt_token:
             headers["jwttoken"] = self.jwt_token
@@ -122,8 +122,10 @@ class FplMainRegionApiClient:
     async def update(self, account) -> dict:
         """Get data from resources endpoint"""
         data = {}
-
-        URL_RESOURCES_ACCOUNT = API_HOST + "/api/resources/account/{account}"
+        URL_RESOURCES_ACCOUNT = (
+            API_HOST
+            + "/cs/customer/v1/accountservices/resources/account/{account}/select?view=account-lander"
+        )
         headers = {}
         if hasattr(self, "jwt_token") and self.jwt_token:
             headers["jwttoken"] = self.jwt_token
@@ -188,7 +190,7 @@ class FplMainRegionApiClient:
         data.update(appliance_usage_data)
 
         # Gets the account balance and past due status.
-        data.update(await self.get_account_details(account))
+        # data.update(await self.get_account_details(account))
 
         return data
 
