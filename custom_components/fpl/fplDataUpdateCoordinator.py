@@ -52,7 +52,7 @@ class FplDataUpdateCoordinator(DataUpdateCoordinator):
             if before is not None:
                 for row in rows:
                     start = dt_util.utc_from_timestamp(row["start"])
-                    if start <= before:
+                    if start < before:
                         return float(row["sum"] or 0.0), start
             else:
                 return float(rows[-1]["sum"] or 0.0), dt_util.utc_from_timestamp(
