@@ -86,13 +86,14 @@ class FplDataUpdateCoordinator(DataUpdateCoordinator):
             start = read_time - timedelta(hours=1)
 
             if cost is not None:
-                cost_sum += cost
-                cost_stat = StatisticData(
-                    start=start,
-                    sum=cost_sum,
-                    state=cost,
-                )
-                cost_stats.append(cost_stat)
+                if not last_cost_start or start > last_cost_start:
+                    cost_sum += cost
+                    cost_stat = StatisticData(
+                        start=start,
+                        sum=cost_sum,
+                        state=cost,
+                    )
+                    cost_stats.append(cost_stat)
 
             if usage is not None:
                 usage_stat = StatisticData(
